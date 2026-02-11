@@ -1,0 +1,45 @@
+# Frontend — dependencies & build
+frontend/node_modules/
+frontend/.expo/
+frontend/dist/
+frontend/web-build/
+frontend/expo-env.d.ts
+frontend/ios/
+frontend/android/
+
+# Frontend — Metro
+.metro-health-check*
+
+# Frontend — debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Frontend — native keys
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Frontend — typescript
+*.tsbuildinfo
+
+# Python — bytecode & caches
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Python — virtual env
+backend/venv/
+
+# Environment files
+.env
+.env*.local
+backend/.env
+frontend/.env
+
+# macOS
+.DS_Store
+*.pem
