@@ -7,6 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 
 type HomeScreenProps = {
@@ -15,6 +16,7 @@ type HomeScreenProps = {
 };
 
 export default function HomeScreen({ user, onLogout }: HomeScreenProps) {
+  const navigation = useNavigation();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -31,6 +33,8 @@ export default function HomeScreen({ user, onLogout }: HomeScreenProps) {
     .toUpperCase()
     .slice(0, 2);
 
+  const openDrawer = () => navigation.dispatch(DrawerActions.openDrawer());
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -40,10 +44,13 @@ export default function HomeScreen({ user, onLogout }: HomeScreenProps) {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Audient</Text>
-        <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
+        <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
+          <View style={styles.hamburgerBar} />
+          <View style={styles.hamburgerBar} />
+          <View style={styles.hamburgerBar} />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Audient</Text>
+        <View style={styles.headerRight} />
       </View>
 
       {/* Content */}
@@ -94,24 +101,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 16,
   },
+  hamburger: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hamburgerBar: {
+    width: 22,
+    height: 2,
+    backgroundColor: '#fff',
+    borderRadius: 1,
+    marginVertical: 2.5,
+  },
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Inter_700Bold',
     color: '#fff',
     letterSpacing: 2,
   },
-  logoutButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  logoutText: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+  headerRight: {
+    width: 36,
   },
   content: {
     flex: 1,

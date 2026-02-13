@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.audient.app"
+      "bundleIdentifier": "com.audient.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Audient uses your location to show your position on the Geo-Sense map."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,11 +25,23 @@
         "backgroundColor": "#1a1a2e"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.audient.app"
+      "package": "com.audient.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Audient uses your location to show your position on the Geo-Sense map."
+        }
+      ]
+    ]
   }
 }

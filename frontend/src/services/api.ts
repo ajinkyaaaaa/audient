@@ -53,3 +53,53 @@ export async function getMe(token: string): Promise<{ user: User }> {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+// Location Profiles
+
+export type LocationProfile = {
+  id: number;
+  user_id: number;
+  name: string;
+  type: 'base' | 'client';
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  use_current_location: boolean;
+  created_at: string;
+};
+
+export async function createLocationProfile(
+  token: string,
+  data: {
+    name: string;
+    type: 'base' | 'client';
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+    use_current_location?: boolean;
+  }
+): Promise<{ profile: LocationProfile }> {
+  return request<{ profile: LocationProfile }>('/locations', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getLocationProfiles(
+  token: string
+): Promise<{ profiles: LocationProfile[] }> {
+  return request<{ profiles: LocationProfile[] }>('/locations', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function deleteLocationProfile(
+  token: string,
+  profileId: number
+): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/locations/${profileId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

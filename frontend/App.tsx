@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import AuthScreen from './src/screens/AuthScreen';
-import HomeScreen from './src/screens/HomeScreen';
+import AppNavigator from './src/navigation/AppNavigator';
 
 type User = {
   id: number;
@@ -28,7 +28,7 @@ export default function App() {
     <>
       <StatusBar style="light" />
       {user && token ? (
-        <HomeScreen user={user} onLogout={handleLogout} />
+        <AppNavigator user={user} token={token} onLogout={handleLogout} />
       ) : (
         <AuthScreen onLogin={handleLogin} />
       )}

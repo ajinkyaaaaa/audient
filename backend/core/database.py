@@ -28,7 +28,20 @@ async def init_db():
         await conn.execute("""
             ALTER TABLE users ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0;
         """)
-    print("Database initialized — users table ready")
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS location_profiles (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                name VARCHAR(255) NOT NULL,
+                type VARCHAR(50) NOT NULL CHECK (type IN ('base', 'client')),
+                address TEXT,
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION,
+                use_current_location BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+    print("Database initialized — tables ready")
 
 
 async def close_db():
