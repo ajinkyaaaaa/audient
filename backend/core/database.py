@@ -72,6 +72,15 @@ async def init_db():
                 updated_at TIMESTAMP DEFAULT NOW()
             );
         """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS recordings (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                transcript TEXT,
+                duration_seconds INTEGER,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
     print("Database initialized — tables ready")
 
 

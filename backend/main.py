@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import settings
 from core.database import close_db, init_db
-from routers import auth, clients, health, locations
+from routers import auth, clients, health, locations, recordings
 
 
 @asynccontextmanager
@@ -30,6 +30,7 @@ app.include_router(auth.router)
 app.include_router(health.router)
 app.include_router(locations.router)
 app.include_router(clients.router)
+app.include_router(recordings.router)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=settings.PORT, reload=True)

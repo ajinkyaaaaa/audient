@@ -4,6 +4,11 @@ export type DrawerParamList = {
   Engagements: undefined;
 };
 
+export type HomeStackParamList = {
+  HomeMain: undefined;
+  RecordingDetail: { recordingId: number };
+};
+
 export type EngagementsStackParamList = {
   EngagementsList: undefined;
   ClientDetail: { clientId: number };

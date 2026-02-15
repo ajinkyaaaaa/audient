@@ -211,3 +211,49 @@ export async function deleteStakeholder(
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+// Recordings
+
+export type Recording = {
+  id: number;
+  user_id: number;
+  transcript: string | null;
+  duration_seconds: number | null;
+  created_at: string;
+};
+
+export async function createRecording(
+  token: string,
+  data: { transcript?: string; duration_seconds?: number }
+): Promise<{ recording: Recording }> {
+  return request<{ recording: Recording }>('/recordings', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getRecordings(token: string): Promise<{ recordings: Recording[] }> {
+  return request<{ recordings: Recording[] }>('/recordings', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function getRecording(
+  token: string,
+  recordingId: number
+): Promise<{ recording: Recording }> {
+  return request<{ recording: Recording }>(`/recordings/${recordingId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function deleteRecording(
+  token: string,
+  recordingId: number
+): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/recordings/${recordingId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

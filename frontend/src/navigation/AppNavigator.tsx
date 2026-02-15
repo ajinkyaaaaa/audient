@@ -4,8 +4,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { DrawerParamList } from './types';
 import CustomDrawerContent from './CustomDrawerContent';
-import HomeScreen from '../screens/HomeScreen';
 import GeoSenseScreen from '../screens/GeoSenseScreen';
+import HomeNavigator from './HomeNavigator';
 import EngagementsNavigator from './EngagementsNavigator';
 
 type User = {
@@ -42,7 +42,7 @@ export default function AppNavigator({ user, token, onLogout }: Props) {
           )}
         >
           <Drawer.Screen name="Home">
-            {() => <HomeScreen user={user} onLogout={onLogout} />}
+            {() => <HomeNavigator user={user} token={token} onLogout={onLogout} />}
           </Drawer.Screen>
           <Drawer.Screen name="Geo-Sense">
             {() => <GeoSenseScreen token={token} />}
