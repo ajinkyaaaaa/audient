@@ -84,17 +84,58 @@
 
 ---
 
-## Session 3 — Engagements & Audio Capture
-**Date:** TBD
-**Milestone:** 3
+## Session 3 — Client Engagements
+**Date:** 2026-02-12
+**Milestone:** 3 (Engagements)
 
 ### Plan
-- Introduce an **Engagements** panel as a new drawer screen, providing a centralized view for managing client interactions and scheduled activities
-- Implement **audio recording** functionality on the Home screen, enabling users to capture voice notes or ambient audio directly within the app
-- Design the Engagements data model and backend endpoints (CRUD operations, linking to location profiles where relevant)
-- Build the Engagements UI: list view, creation form, status tracking
-- Integrate device microphone permissions and recording controls (start, stop, playback) on the Home screen
-- Handle audio file storage and associate recordings with user accounts
+- Introduce an **Engagements** panel as a new drawer screen for managing client engagement records
+- Design the data model: `clients` table (engagement metadata, tier, health) + `stakeholders` table (contacts linked to clients)
+- Build backend CRUD endpoints for clients and stakeholders
+- Build frontend: engagement list with FAB for registration, client detail screen with stakeholder management
+- Add visit history placeholder on client detail for future implementation
+
+### Result
+- Created `clients` table: client_name, client_code (unique), industry_sector, company_size, HQ/office locations, website_domain, client_tier (Strategic/Normal/Low Touch), engagement_health (Good/Neutral/Risk), is_active, timestamps
+- Created `stakeholders` table: contact_name, designation_role, email, phone, notes — FK to clients with CASCADE delete
+- Built `routers/clients.py` with full CRUD:
+  - Clients: create (409 on duplicate code), list, get, update (partial PATCH), delete
+  - Stakeholders: create (requires existing client), list, delete — nested under `/api/clients/:id/stakeholders`
+- Installed `@react-navigation/native-stack` for nested stack navigation inside drawer
+- Built `EngagementsNavigator.tsx` — stack navigator wrapping list and detail screens
+- Built `EngagementsScreen.tsx`:
+  - Hamburger menu + "Engagements" header
+  - Client cards showing name, code, engagement health dot (green/amber/red), industry tag, tier badge, active/inactive status
+  - ">" arrow on each card navigates to detail screen with slide-from-right animation
+  - Floating action button (FAB) in bottom-right opens registration form
+  - Registration form: client name, code (auto-uppercase), industry, company size, HQ/office location, website, tier selector (Strategic/Normal/Low Touch)
+  - Empty state with prompt to register first engagement
+- Built `ClientDetailScreen.tsx`:
+  - Back button + client name header
+  - Info card: code, tier, health (colored), status, industry, size, HQ, office, website
+  - Stakeholders section with "+ Add" button — modal form for contact name, role, email, phone, notes
+  - Stakeholder cards with delete button
+  - Visit History section with "Coming Soon" placeholder
+- Updated drawer menu with "Engagements" entry
+- Added all API functions to `api.ts`: createClient, getClients, getClient, deleteClient, createStakeholder, getStakeholders, deleteStakeholder
+
+### Decisions
+- Engagement health defaults to "Neutral" on creation — manual override to be added later
+- Client code is unique globally (not per-user) to avoid confusion across the system
+- Nested stack navigator inside drawer for the list → detail flow (slide-from-right transition)
+- Stakeholders require a parent client — cannot exist independently
+- Visit history is a placeholder for now, will be built out in a future session
+
+---
+
+## Session 4 — Audio Capture & Visit History
+**Date:** TBD
+**Milestone:** 4
+
+### Plan
+- Implement **audio recording** functionality on the Home screen — mic permissions, record/stop/playback controls, file storage
+- Build out **visit history** on the client detail screen — check-in/check-out logging tied to location profiles
+- Associate audio recordings with user accounts and optionally with client engagements
 
 ### Result
 _To be updated at end of session._

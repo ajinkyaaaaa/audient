@@ -6,6 +6,7 @@ import { DrawerParamList } from './types';
 import CustomDrawerContent from './CustomDrawerContent';
 import HomeScreen from '../screens/HomeScreen';
 import GeoSenseScreen from '../screens/GeoSenseScreen';
+import EngagementsNavigator from './EngagementsNavigator';
 
 type User = {
   id: number;
@@ -45,6 +46,9 @@ export default function AppNavigator({ user, token, onLogout }: Props) {
           </Drawer.Screen>
           <Drawer.Screen name="Geo-Sense">
             {() => <GeoSenseScreen token={token} />}
+          </Drawer.Screen>
+          <Drawer.Screen name="Engagements">
+            {() => <EngagementsNavigator token={token} />}
           </Drawer.Screen>
         </Drawer.Navigator>
       </NavigationContainer>

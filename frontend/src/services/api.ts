@@ -103,3 +103,111 @@ export async function deleteLocationProfile(
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+// Clients (Engagements)
+
+export type Client = {
+  id: number;
+  user_id: number;
+  client_name: string;
+  client_code: string;
+  industry_sector: string | null;
+  company_size: string | null;
+  headquarters_location: string | null;
+  primary_office_location: string | null;
+  website_domain: string | null;
+  client_tier: 'Strategic' | 'Normal' | 'Low Touch';
+  engagement_health: 'Good' | 'Neutral' | 'Risk';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Stakeholder = {
+  id: number;
+  client_id: number;
+  contact_name: string;
+  designation_role: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function createClient(
+  token: string,
+  data: {
+    client_name: string;
+    client_code: string;
+    industry_sector?: string;
+    company_size?: string;
+    headquarters_location?: string;
+    primary_office_location?: string;
+    website_domain?: string;
+    client_tier?: string;
+  }
+): Promise<{ client: Client }> {
+  return request<{ client: Client }>('/clients', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getClients(token: string): Promise<{ clients: Client[] }> {
+  return request<{ clients: Client[] }>('/clients', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function getClient(token: string, clientId: number): Promise<{ client: Client }> {
+  return request<{ client: Client }>(`/clients/${clientId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function deleteClient(token: string, clientId: number): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/clients/${clientId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function createStakeholder(
+  token: string,
+  clientId: number,
+  data: {
+    contact_name: string;
+    designation_role?: string;
+    email?: string;
+    phone?: string;
+    notes?: string;
+  }
+): Promise<{ stakeholder: Stakeholder }> {
+  return request<{ stakeholder: Stakeholder }>(`/clients/${clientId}/stakeholders`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getStakeholders(
+  token: string,
+  clientId: number
+): Promise<{ stakeholders: Stakeholder[] }> {
+  return request<{ stakeholders: Stakeholder[] }>(`/clients/${clientId}/stakeholders`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function deleteStakeholder(
+  token: string,
+  clientId: number,
+  stakeholderId: number
+): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/clients/${clientId}/stakeholders/${stakeholderId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
