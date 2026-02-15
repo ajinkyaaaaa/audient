@@ -2,6 +2,7 @@ export type DrawerParamList = {
   Home: undefined;
   'Geo-Sense': undefined;
   Engagements: undefined;
+  Tasks: undefined;
 };
 
 export type HomeStackParamList = {

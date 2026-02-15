@@ -7,6 +7,7 @@ import CustomDrawerContent from './CustomDrawerContent';
 import GeoSenseScreen from '../screens/GeoSenseScreen';
 import HomeNavigator from './HomeNavigator';
 import EngagementsNavigator from './EngagementsNavigator';
+import TasksScreen from '../screens/TasksScreen';
 
 type User = {
   id: number;
@@ -50,6 +51,7 @@ export default function AppNavigator({ user, token, onLogout }: Props) {
           <Drawer.Screen name="Engagements">
             {() => <EngagementsNavigator token={token} />}
           </Drawer.Screen>
+          <Drawer.Screen name="Tasks" component={TasksScreen} />
         </Drawer.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>

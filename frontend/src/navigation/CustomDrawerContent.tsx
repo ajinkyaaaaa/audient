@@ -23,6 +23,7 @@ export default function CustomDrawerContent({ user, onLogout, state, navigation 
     { label: 'Home', route: 'Home' },
     { label: 'Geo-Sense', route: 'Geo-Sense' },
     { label: 'Engagements', route: 'Engagements' },
+    { label: 'Tasks', route: 'Tasks' },
   ];
 
   return (
