@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import {
   useFonts,
@@ -83,9 +82,8 @@ export default function RecordingDetailScreen({ token, recordingId }: Props) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={StyleSheet.absoluteFill} />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#818cf8" />
+          <ActivityIndicator size="large" color="#3d7b5f" />
         </View>
       </View>
     );
@@ -94,7 +92,6 @@ export default function RecordingDetailScreen({ token, recordingId }: Props) {
   if (!recording) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={StyleSheet.absoluteFill} />
         <View style={styles.centered}>
           <Text style={styles.emptyText}>Recording not found</Text>
         </View>
@@ -104,11 +101,6 @@ export default function RecordingDetailScreen({ token, recordingId }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#0f0c29', '#302b63', '#24243e']}
-        style={StyleSheet.absoluteFill}
-      />
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -158,7 +150,7 @@ export default function RecordingDetailScreen({ token, recordingId }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0c29',
+    backgroundColor: '#f5f5f0',
   },
   centered: {
     flex: 1,
@@ -168,7 +160,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#4a5568',
   },
   header: {
     flexDirection: 'row',
@@ -182,19 +174,21 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#f9fafb',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   backText: {
-    color: '#fff',
+    color: '#1a1a1a',
     fontSize: 18,
     fontFamily: 'Inter_600SemiBold',
   },
   headerTitle: {
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   headerRight: {
     width: 36,
@@ -209,9 +203,9 @@ const styles = StyleSheet.create({
 
   // Info Card
   infoCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#e5e7eb',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -224,14 +218,14 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(99,102,241,0.2)',
+    backgroundColor: 'rgba(61,123,95,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   micBodyLarge: {
     width: 16,
     height: 24,
-    backgroundColor: '#818cf8',
+    backgroundColor: '#3d7b5f',
     borderRadius: 8,
   },
   infoRow: {
@@ -240,17 +234,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: '#f5f5f0',
   },
   infoLabel: {
     fontSize: 13,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
   },
   infoValue: {
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
+    color: '#1a1a1a',
     flex: 1,
     textAlign: 'right',
   },
@@ -261,7 +255,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(239,68,68,0.3)',
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    backgroundColor: 'rgba(239,68,68,0.08)',
     alignItems: 'center',
   },
   deleteButtonText: {

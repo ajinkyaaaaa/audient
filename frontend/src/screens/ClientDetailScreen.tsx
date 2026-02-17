@@ -125,9 +125,8 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={StyleSheet.absoluteFill} />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#818cf8" />
+          <ActivityIndicator size="large" color="#3d7b5f" />
         </View>
       </View>
     );
@@ -136,7 +135,6 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
   if (!client) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={StyleSheet.absoluteFill} />
         <View style={styles.centered}>
           <Text style={styles.emptyText}>Client not found</Text>
         </View>
@@ -148,11 +146,6 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#0f0c29', '#302b63', '#24243e']}
-        style={StyleSheet.absoluteFill}
-      />
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -274,11 +267,6 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
       <Modal visible={showStakeholderForm} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <LinearGradient
-              colors={['#1a1740', '#2d2760']}
-              style={StyleSheet.absoluteFill}
-            />
-
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Stakeholder</Text>
               <TouchableOpacity onPress={() => setShowStakeholderForm(false)}>
@@ -291,7 +279,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="Full name"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={shName}
                 onChangeText={setShName}
               />
@@ -300,7 +288,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. VP Engineering"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={shRole}
                 onChangeText={setShRole}
               />
@@ -309,7 +297,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="email@company.com"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={shEmail}
                 onChangeText={setShEmail}
                 keyboardType="email-address"
@@ -320,7 +308,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="+1 555-0100"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={shPhone}
                 onChangeText={setShPhone}
                 keyboardType="phone-pad"
@@ -330,7 +318,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={[styles.formInput, styles.formInputMultiline]}
                 placeholder="Any relevant notes"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={shNotes}
                 onChangeText={setShNotes}
                 multiline
@@ -347,7 +335,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
                 disabled={shSubmitting}
               >
                 <LinearGradient
-                  colors={['#6366f1', '#8b5cf6']}
+                  colors={['#3d7b5f', '#4a9d7a']}
                   style={styles.submitButtonGradient}
                 >
                   {shSubmitting ? (
@@ -368,7 +356,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0c29',
+    backgroundColor: '#f5f5f0',
   },
   centered: {
     flex: 1,
@@ -378,7 +366,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#4a5568',
   },
   header: {
     flexDirection: 'row',
@@ -392,19 +380,21 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#f9fafb',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   backText: {
-    color: '#fff',
+    color: '#1a1a1a',
     fontSize: 18,
     fontFamily: 'Inter_600SemiBold',
   },
   headerTitle: {
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 12,
@@ -422,9 +412,9 @@ const styles = StyleSheet.create({
 
   // Info Card
   infoCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#e5e7eb',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -435,17 +425,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: '#f5f5f0',
   },
   infoLabel: {
     fontSize: 13,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
   },
   infoValue: {
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   healthRow: {
     flexDirection: 'row',
@@ -468,26 +458,26 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   addSmallButton: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 10,
-    backgroundColor: 'rgba(99,102,241,0.2)',
+    backgroundColor: 'rgba(61,123,95,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.4)',
+    borderColor: 'rgba(61,123,95,0.3)',
   },
   addSmallButtonText: {
     fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
-    color: '#818cf8',
+    color: '#3d7b5f',
   },
   emptySection: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e5e7eb',
     padding: 24,
     alignItems: 'center',
     marginBottom: 24,
@@ -495,14 +485,14 @@ const styles = StyleSheet.create({
   emptySectionText: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.3)',
+    color: '#9ca3af',
   },
 
   // Stakeholder Card
   stakeholderCard: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e5e7eb',
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
@@ -515,19 +505,19 @@ const styles = StyleSheet.create({
   stakeholderName: {
     fontSize: 15,
     fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   stakeholderRole: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: '#818cf8',
+    color: '#3d7b5f',
     marginTop: 2,
   },
   deleteBtn: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(239,68,68,0.15)',
+    backgroundColor: 'rgba(239,68,68,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -539,22 +529,22 @@ const styles = StyleSheet.create({
   stakeholderDetail: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#4a5568',
     marginTop: 4,
   },
   stakeholderNotes: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.35)',
+    color: '#9ca3af',
     marginTop: 6,
     fontStyle: 'italic',
   },
 
   // Visit History Placeholder
   visitPlaceholder: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e5e7eb',
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
@@ -562,19 +552,19 @@ const styles = StyleSheet.create({
   },
   visitPlaceholderIcon: {
     fontSize: 28,
-    color: 'rgba(255,255,255,0.15)',
+    color: '#d1d5db',
     marginBottom: 12,
   },
   visitPlaceholderTitle: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
     marginBottom: 6,
   },
   visitPlaceholderText: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.25)',
+    color: '#9ca3af',
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -582,10 +572,11 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   modalContent: {
+    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -598,15 +589,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   modalClose: {
     fontSize: 20,
-    color: 'rgba(255,255,255,0.5)',
+    color: '#9ca3af',
     fontFamily: 'Inter_500Medium',
     padding: 4,
   },
@@ -616,20 +609,20 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
-    color: 'rgba(255,255,255,0.7)',
+    color: '#4a5568',
     marginBottom: 8,
     marginTop: 16,
   },
   formInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: '#d1d5db',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   formInputMultiline: {
     minHeight: 70,

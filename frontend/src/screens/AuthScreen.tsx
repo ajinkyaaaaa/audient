@@ -138,7 +138,7 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
 
       {/* Dark Overlay */}
       <LinearGradient
-        colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.85)']}
+        colors={['rgba(0,0,0,0.35)', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.7)']}
         style={styles.overlay}
       />
 
@@ -164,109 +164,112 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
             {isLogin ? 'Welcome back' : 'Create your account'}
           </Text>
 
-          {/* Success Message */}
-          {success ? (
-            <View style={styles.successContainer}>
-              <Text style={styles.successText}>{success}</Text>
-            </View>
-          ) : null}
+          {/* Card wrapper for form */}
+          <View style={styles.formCard}>
+            {/* Success Message */}
+            {success ? (
+              <View style={styles.successContainer}>
+                <Text style={styles.successText}>{success}</Text>
+              </View>
+            ) : null}
 
-          {/* Error Message */}
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+            {/* Error Message */}
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-          {/* Form */}
-          <View style={styles.form}>
-            {!isLogin && (
+            {/* Form */}
+            <View style={styles.form}>
+              {!isLogin && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Full Name"
+                  placeholderTextColor="#9ca3af"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                />
+              )}
+
               <TextInput
                 style={styles.input}
-                placeholder="Full Name"
-                placeholderTextColor="rgba(255,255,255,0.5)"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
+                placeholder="Email"
+                placeholderTextColor="#9ca3af"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
-            )}
 
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="rgba(255,255,255,0.5)"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="rgba(255,255,255,0.5)"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-
-            {!isLogin && (
               <TextInput
                 style={styles.input}
-                placeholder="Confirm Password"
-                placeholderTextColor="rgba(255,255,255,0.5)"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                placeholder="Password"
+                placeholderTextColor="#9ca3af"
+                value={password}
+                onChangeText={setPassword}
                 secureTextEntry
               />
-            )}
 
-            {isLogin && (
-              <TouchableOpacity style={styles.forgotButton}>
-                <Text style={styles.forgotText}>Forgot password?</Text>
-              </TouchableOpacity>
-            )}
+              {!isLogin && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm Password"
+                  placeholderTextColor="#9ca3af"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                />
+              )}
 
-            <TouchableOpacity
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              <LinearGradient
-                colors={['#6366f1', '#8b5cf6']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.submitGradient}
+              {isLogin && (
+                <TouchableOpacity style={styles.forgotButton}>
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                onPress={handleSubmit}
+                disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitText}>
-                    {isLogin ? 'Sign In' : 'Create Account'}
-                  </Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-
-          {/* Social Login */}
-          <View style={styles.socialSection}>
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
+                <LinearGradient
+                  colors={['#3d7b5f', '#4a9d7a']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.submitGradient}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.submitText}>
+                      {isLogin ? 'Sign In' : 'Create Account'}
+                    </Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialIcon}>G</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialIcon}>f</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialIcon}>{'\u{1D54F}'}</Text>
-              </TouchableOpacity>
+            {/* Social Login */}
+            <View style={styles.socialSection}>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <View style={styles.socialButtons}>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Text style={styles.socialIcon}>G</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Text style={styles.socialIcon}>f</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Text style={styles.socialIcon}>{'\u{1D54F}'}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -308,8 +311,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(61,123,95,0.5)',
+    backgroundColor: 'rgba(61,123,95,0.2)',
   },
   headerButtonText: {
     color: '#fff',
@@ -338,12 +341,18 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.6)',
-    marginBottom: 48,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 32,
+  },
+  formCard: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 20,
+    padding: 24,
   },
   successContainer: {
     width: '100%',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(34, 197, 94, 0.3)',
     borderRadius: 12,
@@ -351,14 +360,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   successText: {
-    color: '#4ade80',
+    color: '#22c55e',
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
   },
   errorContainer: {
     width: '100%',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
     borderRadius: 12,
@@ -366,7 +375,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorText: {
-    color: '#f87171',
+    color: '#ef4444',
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
@@ -377,15 +386,15 @@ const styles = StyleSheet.create({
   input: {
     width: '100%',
     height: 56,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#f9fafb',
     borderRadius: 12,
     paddingHorizontal: 20,
     fontSize: 16,
     fontFamily: 'Inter_400Regular',
-    color: '#fff',
+    color: '#1a1a1a',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#d1d5db',
   },
   forgotButton: {
     alignSelf: 'flex-end',
@@ -393,7 +402,7 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   forgotText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: '#4a5568',
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
   },
@@ -417,7 +426,7 @@ const styles = StyleSheet.create({
   },
   socialSection: {
     width: '100%',
-    marginTop: 32,
+    marginTop: 24,
   },
   divider: {
     flexDirection: 'row',
@@ -427,10 +436,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#e5e7eb',
   },
   dividerText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
     marginHorizontal: 16,
@@ -444,15 +453,15 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#f9fafb',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#e5e7eb',
   },
   socialIcon: {
     fontSize: 20,
     fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
+    color: '#1a1a1a',
   },
 });

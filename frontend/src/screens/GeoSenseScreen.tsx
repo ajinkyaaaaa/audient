@@ -174,11 +174,6 @@ export default function GeoSenseScreen({ token }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#0f0c29', '#302b63', '#24243e']}
-        style={StyleSheet.absoluteFill}
-      />
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
@@ -200,7 +195,7 @@ export default function GeoSenseScreen({ token }: Props) {
         <View style={styles.mapContainer}>
           {permissionStatus === 'loading' || !location ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#818cf8" />
+              <ActivityIndicator size="large" color="#3d7b5f" />
               <Text style={styles.loadingText}>Getting location...</Text>
             </View>
           ) : (
@@ -223,7 +218,7 @@ export default function GeoSenseScreen({ token }: Props) {
                       onPress={requestPermissionAndWatch}
                     >
                       <LinearGradient
-                        colors={['#6366f1', '#8b5cf6']}
+                        colors={['#3d7b5f', '#4a9d7a']}
                         style={styles.enableButtonGradient}
                       >
                         <Text style={styles.enableButtonText}>Enable</Text>
@@ -308,11 +303,6 @@ export default function GeoSenseScreen({ token }: Props) {
       <Modal visible={showForm} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <LinearGradient
-              colors={['#1a1740', '#2d2760']}
-              style={StyleSheet.absoluteFill}
-            />
-
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>New Location Profile</Text>
               <TouchableOpacity onPress={() => setShowForm(false)}>
@@ -326,7 +316,7 @@ export default function GeoSenseScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. Office, Client HQ"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={formName}
                 onChangeText={setFormName}
               />
@@ -358,8 +348,8 @@ export default function GeoSenseScreen({ token }: Props) {
                 <Switch
                   value={formUseCurrentLocation}
                   onValueChange={setFormUseCurrentLocation}
-                  trackColor={{ false: 'rgba(255,255,255,0.15)', true: 'rgba(34,197,94,0.4)' }}
-                  thumbColor={formUseCurrentLocation ? '#22c55e' : '#888'}
+                  trackColor={{ false: '#d1d5db', true: 'rgba(34,197,94,0.4)' }}
+                  thumbColor={formUseCurrentLocation ? '#22c55e' : '#9ca3af'}
                 />
               </View>
               {formUseCurrentLocation && location && (
@@ -382,7 +372,7 @@ export default function GeoSenseScreen({ token }: Props) {
                   <TextInput
                     style={[styles.formInput, styles.formInputMultiline]}
                     placeholder="Enter the full address"
-                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    placeholderTextColor="#9ca3af"
                     value={formAddress}
                     onChangeText={setFormAddress}
                     multiline
@@ -402,7 +392,7 @@ export default function GeoSenseScreen({ token }: Props) {
                 disabled={formSubmitting}
               >
                 <LinearGradient
-                  colors={['#6366f1', '#8b5cf6']}
+                  colors={['#3d7b5f', '#4a9d7a']}
                   style={styles.submitButtonGradient}
                 >
                   {formSubmitting ? (
@@ -423,7 +413,7 @@ export default function GeoSenseScreen({ token }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0c29',
+    backgroundColor: '#f5f5f0',
   },
   header: {
     flexDirection: 'row',
@@ -442,28 +432,28 @@ const styles = StyleSheet.create({
   hamburgerBar: {
     width: 22,
     height: 2,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderRadius: 1,
     marginVertical: 2.5,
   },
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
     letterSpacing: 2,
   },
   addButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(99,102,241,0.3)',
+    backgroundColor: 'rgba(61,123,95,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.5)',
+    borderColor: 'rgba(61,123,95,0.3)',
   },
   addButtonText: {
-    color: '#818cf8',
+    color: '#3d7b5f',
     fontSize: 22,
     fontFamily: 'Inter_600SemiBold',
     marginTop: -1,
@@ -488,18 +478,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#f9fafb',
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#9ca3af',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15,12,41,0.75)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 16,
@@ -517,7 +509,7 @@ const styles = StyleSheet.create({
   overlayDescription: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
@@ -539,9 +531,9 @@ const styles = StyleSheet.create({
   coordCard: {
     marginHorizontal: 16,
     marginTop: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#e5e7eb',
     borderRadius: 16,
     padding: 20,
   },
@@ -576,13 +568,13 @@ const styles = StyleSheet.create({
   coordLabel: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#9ca3af',
     marginBottom: 4,
   },
   coordValue: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
+    color: '#1a1a1a',
   },
 
   // Profiles Section
@@ -593,32 +585,32 @@ const styles = StyleSheet.create({
   profilesSectionTitle: {
     fontSize: 18,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
     marginBottom: 16,
   },
   emptyProfiles: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e5e7eb',
     padding: 32,
     alignItems: 'center',
   },
   emptyText: {
     fontSize: 15,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#4a5568',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.3)',
+    color: '#9ca3af',
   },
   profileCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#e5e7eb',
     borderRadius: 14,
     padding: 16,
     marginBottom: 10,
@@ -637,7 +629,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
+    color: '#1a1a1a',
     marginRight: 10,
   },
   typeBadge: {
@@ -646,17 +638,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   baseBadge: {
-    backgroundColor: 'rgba(99,102,241,0.2)',
+    backgroundColor: 'rgba(61,123,95,0.12)',
   },
   clientBadge: {
-    backgroundColor: 'rgba(34,197,94,0.2)',
+    backgroundColor: 'rgba(34,197,94,0.15)',
   },
   typeBadgeText: {
     fontSize: 11,
     fontFamily: 'Inter_600SemiBold',
   },
   baseBadgeText: {
-    color: '#818cf8',
+    color: '#3d7b5f',
   },
   clientBadgeText: {
     color: '#22c55e',
@@ -665,7 +657,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(239,68,68,0.15)',
+    backgroundColor: 'rgba(239,68,68,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -677,13 +669,13 @@ const styles = StyleSheet.create({
   profileDetail: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.6)',
+    color: '#4a5568',
     marginBottom: 4,
   },
   profileCoords: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
   },
   profileCaptured: {
     fontSize: 11,
@@ -695,10 +687,11 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   modalContent: {
+    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -711,15 +704,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   modalClose: {
     fontSize: 20,
-    color: 'rgba(255,255,255,0.5)',
+    color: '#9ca3af',
     fontFamily: 'Inter_500Medium',
     padding: 4,
   },
@@ -730,20 +725,20 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
-    color: 'rgba(255,255,255,0.7)',
+    color: '#4a5568',
     marginBottom: 8,
     marginTop: 16,
   },
   formInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: '#d1d5db',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   formInputMultiline: {
     minHeight: 60,
@@ -758,21 +753,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: '#d1d5db',
+    backgroundColor: '#f9fafb',
     alignItems: 'center',
   },
   typeOptionActive: {
-    borderColor: '#6366f1',
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    borderColor: '#3d7b5f',
+    backgroundColor: 'rgba(61,123,95,0.1)',
   },
   typeOptionText: {
     fontSize: 14,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#9ca3af',
   },
   typeOptionTextActive: {
-    color: '#818cf8',
+    color: '#3d7b5f',
     fontFamily: 'Inter_600SemiBold',
   },
   switchRow: {

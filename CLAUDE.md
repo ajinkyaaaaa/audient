@@ -150,9 +150,9 @@ CREATE TABLE stakeholders (
 - JWT tokens: HS256, 7-day expiry, payload contains `{id, email, exp, iat}`
 - Auth flow: register redirects to login page (no auto-login after register)
 - HomeScreen shows "Welcome" on first login, "Welcome back" on subsequent logins
-- Navigation: `@react-navigation/drawer` with custom dark-themed drawer content
+- Navigation: `@react-navigation/drawer` with custom dark-green-themed drawer content
 - Maps: platform-split — `.tsx` for native (react-native-maps), `.web.tsx` for web (react-leaflet + CartoDB Voyager tiles)
-- Dark gradient theme across all screens: `#0f0c29` → `#302b63` → `#24243e`
+- Light green theme: `#f5f5f0` page bg, `#ffffff` cards with `#e5e7eb` borders, `#3d7b5f`→`#4a9d7a` green accents, `#2d4a3e`→`#1f3830` dark green drawer
 - Location profiles: one base per user (enforced server-side), unlimited client locations
 - Engagements: nested stack navigator inside drawer for list → detail transitions (`@react-navigation/native-stack`)
 - Client engagement_health defaults to "Neutral" on creation

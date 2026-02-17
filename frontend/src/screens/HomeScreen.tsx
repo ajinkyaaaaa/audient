@@ -140,11 +140,6 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#0f0c29', '#302b63', '#24243e']}
-        style={styles.background}
-      />
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
@@ -165,7 +160,7 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
             activeOpacity={0.7}
           >
             <LinearGradient
-              colors={isRecording ? ['#ef4444', '#dc2626'] : ['#6366f1', '#8b5cf6']}
+              colors={isRecording ? ['#ef4444', '#dc2626'] : ['#3d7b5f', '#4a9d7a']}
               style={styles.micGradient}
             >
               {/* Mic icon using styled views */}
@@ -203,7 +198,7 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
           </Text>
 
           {loadingRecordings ? (
-            <ActivityIndicator color="#818cf8" style={{ marginTop: 20 }} />
+            <ActivityIndicator color="#3d7b5f" style={{ marginTop: 20 }} />
           ) : recordings.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No recordings yet</Text>
@@ -245,14 +240,7 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0c29',
-  },
-  background: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    backgroundColor: '#f5f5f0',
   },
   header: {
     flexDirection: 'row',
@@ -271,14 +259,14 @@ const styles = StyleSheet.create({
   hamburgerBar: {
     width: 22,
     height: 2,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderRadius: 1,
     marginVertical: 2.5,
   },
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
     letterSpacing: 2,
   },
   headerRight: {
@@ -301,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: '#6366f1',
+    shadowColor: '#3d7b5f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -361,7 +349,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
   },
   stopButton: {
     flexDirection: 'row',
@@ -370,7 +358,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 28,
     borderRadius: 24,
-    backgroundColor: 'rgba(239,68,68,0.15)',
+    backgroundColor: 'rgba(239,68,68,0.1)',
     borderWidth: 1,
     borderColor: 'rgba(239,68,68,0.3)',
   },
@@ -395,35 +383,35 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
     marginBottom: 16,
   },
   emptyState: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e5e7eb',
     padding: 32,
     alignItems: 'center',
   },
   emptyText: {
     fontSize: 15,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#4a5568',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.3)',
+    color: '#9ca3af',
   },
   recordingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e5e7eb',
     borderRadius: 14,
     padding: 14,
     marginBottom: 8,
@@ -437,7 +425,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(99,102,241,0.2)',
+    backgroundColor: 'rgba(61,123,95,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -445,7 +433,7 @@ const styles = StyleSheet.create({
   micBodySmall: {
     width: 10,
     height: 16,
-    backgroundColor: '#818cf8',
+    backgroundColor: '#3d7b5f',
     borderRadius: 5,
   },
   recordingMeta: {
@@ -454,25 +442,25 @@ const styles = StyleSheet.create({
   recordingTitle: {
     fontSize: 14,
     fontFamily: 'Inter_500Medium',
-    color: '#fff',
+    color: '#1a1a1a',
     marginBottom: 2,
   },
   recordingDate: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
   },
   recordingArrow: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#f5f5f0',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
   arrowText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
   },

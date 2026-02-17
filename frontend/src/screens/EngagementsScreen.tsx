@@ -127,11 +127,6 @@ export default function EngagementsScreen({ token }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#0f0c29', '#302b63', '#24243e']}
-        style={StyleSheet.absoluteFill}
-      />
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
@@ -146,7 +141,7 @@ export default function EngagementsScreen({ token }: Props) {
       {/* Client List */}
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#818cf8" />
+          <ActivityIndicator size="large" color="#3d7b5f" />
         </View>
       ) : clients.length === 0 ? (
         <View style={styles.centered}>
@@ -184,7 +179,7 @@ export default function EngagementsScreen({ token }: Props) {
                   </View>
                 ) : null}
                 <View style={[styles.metaTag, styles.tierTag]}>
-                  <Text style={styles.metaTagText}>{c.client_tier}</Text>
+                  <Text style={styles.tierTagText}>{c.client_tier}</Text>
                 </View>
                 <View style={[
                   styles.statusTag,
@@ -213,7 +208,7 @@ export default function EngagementsScreen({ token }: Props) {
         onPress={() => { resetForm(); setShowForm(true); }}
         activeOpacity={0.8}
       >
-        <LinearGradient colors={['#6366f1', '#8b5cf6']} style={styles.fabGradient}>
+        <LinearGradient colors={['#3d7b5f', '#4a9d7a']} style={styles.fabGradient}>
           <Text style={styles.fabText}>+</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -222,11 +217,6 @@ export default function EngagementsScreen({ token }: Props) {
       <Modal visible={showForm} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <LinearGradient
-              colors={['#1a1740', '#2d2760']}
-              style={StyleSheet.absoluteFill}
-            />
-
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>New Engagement</Text>
               <TouchableOpacity onPress={() => setShowForm(false)}>
@@ -240,7 +230,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. Acme Corporation"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={formClientName}
                 onChangeText={setFormClientName}
               />
@@ -250,7 +240,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. ACME"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={formClientCode}
                 onChangeText={setFormClientCode}
                 autoCapitalize="characters"
@@ -261,7 +251,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. Technology, Healthcare"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={formIndustry}
                 onChangeText={setFormIndustry}
               />
@@ -271,7 +261,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. 50-200, Enterprise"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={formCompanySize}
                 onChangeText={setFormCompanySize}
               />
@@ -281,7 +271,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. New York, NY"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={formHqLocation}
                 onChangeText={setFormHqLocation}
               />
@@ -291,7 +281,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. San Francisco, CA"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={formOfficeLocation}
                 onChangeText={setFormOfficeLocation}
               />
@@ -301,7 +291,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. acme.com"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor="#9ca3af"
                 value={formWebsite}
                 onChangeText={setFormWebsite}
                 autoCapitalize="none"
@@ -334,7 +324,7 @@ export default function EngagementsScreen({ token }: Props) {
                 disabled={formSubmitting}
               >
                 <LinearGradient
-                  colors={['#6366f1', '#8b5cf6']}
+                  colors={['#3d7b5f', '#4a9d7a']}
                   style={styles.submitButtonGradient}
                 >
                   {formSubmitting ? (
@@ -355,7 +345,7 @@ export default function EngagementsScreen({ token }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0c29',
+    backgroundColor: '#f5f5f0',
   },
   header: {
     flexDirection: 'row',
@@ -374,14 +364,14 @@ const styles = StyleSheet.create({
   hamburgerBar: {
     width: 22,
     height: 2,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderRadius: 1,
     marginVertical: 2.5,
   },
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
     letterSpacing: 2,
   },
   headerRight: {
@@ -396,13 +386,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#4a5568',
     marginBottom: 6,
   },
   emptySubtext: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.3)',
+    color: '#9ca3af',
     textAlign: 'center',
   },
   list: {
@@ -415,9 +405,9 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#e5e7eb',
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
@@ -438,7 +428,7 @@ const styles = StyleSheet.create({
   clientName: {
     fontSize: 17,
     fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
+    color: '#1a1a1a',
     marginRight: 8,
   },
   healthDot: {
@@ -449,19 +439,19 @@ const styles = StyleSheet.create({
   clientCode: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
     marginTop: 2,
   },
   cardRight: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#f5f5f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   arrowText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
   },
@@ -475,15 +465,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#f5f5f0',
   },
   tierTag: {
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: 'rgba(61,123,95,0.12)',
   },
   metaTagText: {
     fontSize: 11,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.6)',
+    color: '#4a5568',
+  },
+  tierTagText: {
+    fontSize: 11,
+    fontFamily: 'Inter_500Medium',
+    color: '#3d7b5f',
   },
   statusTag: {
     paddingHorizontal: 10,
@@ -509,7 +504,7 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.35)',
+    color: '#9ca3af',
     marginTop: 4,
   },
 
@@ -521,7 +516,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: '#6366f1',
+    shadowColor: '#3d7b5f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -543,10 +538,11 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   modalContent: {
+    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -559,15 +555,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   modalClose: {
     fontSize: 20,
-    color: 'rgba(255,255,255,0.5)',
+    color: '#9ca3af',
     fontFamily: 'Inter_500Medium',
     padding: 4,
   },
@@ -577,20 +575,20 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
-    color: 'rgba(255,255,255,0.7)',
+    color: '#4a5568',
     marginBottom: 8,
     marginTop: 16,
   },
   formInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: '#d1d5db',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: '#fff',
+    color: '#1a1a1a',
   },
   tierSelector: {
     flexDirection: 'row',
@@ -601,21 +599,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: '#d1d5db',
+    backgroundColor: '#f9fafb',
     alignItems: 'center',
   },
   tierOptionActive: {
-    borderColor: '#6366f1',
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    borderColor: '#3d7b5f',
+    backgroundColor: 'rgba(61,123,95,0.1)',
   },
   tierOptionText: {
     fontSize: 12,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#9ca3af',
   },
   tierOptionTextActive: {
-    color: '#818cf8',
+    color: '#3d7b5f',
     fontFamily: 'Inter_600SemiBold',
   },
   formErrorText: {

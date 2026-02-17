@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import {
   useFonts,
@@ -24,11 +23,6 @@ export default function TasksScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#0f0c29', '#302b63', '#24243e']}
-        style={StyleSheet.absoluteFill}
-      />
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -55,7 +49,7 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0c29',
+    backgroundColor: '#f5f5f0',
   },
   header: {
     flexDirection: 'row',
@@ -74,14 +68,14 @@ const styles = StyleSheet.create({
   hamburgerBar: {
     width: 22,
     height: 2,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderRadius: 1,
     marginVertical: 2.5,
   },
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: '#1a1a1a',
     letterSpacing: 2,
   },
   headerRight: {
@@ -96,13 +90,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#4a5568',
     marginBottom: 6,
   },
   emptySubtext: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.3)',
+    color: '#9ca3af',
     textAlign: 'center',
   },
 });

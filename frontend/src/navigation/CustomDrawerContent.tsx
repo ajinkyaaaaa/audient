@@ -29,7 +29,7 @@ export default function CustomDrawerContent({ user, onLogout, state, navigation 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#0f0c29', '#302b63', '#24243e']}
+        colors={['#2d4a3e', '#1f3830']}
         style={StyleSheet.absoluteFill}
       />
 
@@ -39,7 +39,7 @@ export default function CustomDrawerContent({ user, onLogout, state, navigation 
       >
         {/* User Header */}
         <View style={styles.header}>
-          <LinearGradient colors={['#6366f1', '#8b5cf6']} style={styles.avatar}>
+          <LinearGradient colors={['#3d7b5f', '#4a9d7a']} style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </LinearGradient>
           <Text style={styles.userName}>{user.name}</Text>
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   menuItemActive: {
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: 'rgba(61,123,95,0.25)',
   },
   menuLabel: {
     fontSize: 16,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
   menuLabelActive: {
-    color: '#818cf8',
+    color: '#4a9d7a',
     fontFamily: 'Inter_600SemiBold',
   },
   footer: {
