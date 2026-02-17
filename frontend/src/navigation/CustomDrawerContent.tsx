@@ -5,11 +5,19 @@ import {
   DrawerContentComponentProps,
 } from '@react-navigation/drawer';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 type Props = DrawerContentComponentProps & {
   user: { name: string; email: string };
   onLogout: () => void;
 };
+
+const menuItems = [
+  { label: 'Home', route: 'Home', icon: 'home' as const },
+  { label: 'Geo-Sense', route: 'Geo-Sense', icon: 'location' as const },
+  { label: 'Engagements', route: 'Engagements', icon: 'briefcase' as const },
+  { label: 'Tasks', route: 'Tasks', icon: 'checkbox' as const },
+];
 
 export default function CustomDrawerContent({ user, onLogout, state, navigation }: Props) {
   const initials = user.name
@@ -19,59 +27,44 @@ export default function CustomDrawerContent({ user, onLogout, state, navigation 
     .toUpperCase()
     .slice(0, 2);
 
-  const menuItems = [
-    { label: 'Home', route: 'Home' },
-    { label: 'Geo-Sense', route: 'Geo-Sense' },
-    { label: 'Engagements', route: 'Engagements' },
-    { label: 'Tasks', route: 'Tasks' },
-  ];
-
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#2d4a3e', '#1f3830']}
+        colors={['#C05800', '#8B3E00']}
         style={StyleSheet.absoluteFill}
       />
 
-      <DrawerContentScrollView
-        contentContainerStyle={styles.scrollContent}
-        scrollEnabled={false}
-      >
-        {/* User Header */}
-        <View style={styles.header}>
-          <LinearGradient colors={['#3d7b5f', '#4a9d7a']} style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </LinearGradient>
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
+      {/* Brand Logo */}
+      <View style={styles.logoSection}>
+        <View style={styles.logoCircle}>
+          <Text style={styles.logoText}>A</Text>
         </View>
+      </View>
 
-        <View style={styles.divider} />
+      {/* Nav Items */}
+      <View style={styles.navSection}>
+        {menuItems.map((item) => {
+          const isActive = state.routes[state.index]?.name === item.route;
+          return (
+            <TouchableOpacity
+              key={item.route}
+              style={[styles.navItem, isActive && styles.navItemActive]}
+              onPress={() => navigation.navigate(item.route)}
+            >
+              <Ionicons
+                name={isActive ? item.icon : (`${item.icon}-outline` as any)}
+                size={22}
+                color={isActive ? '#FFFFFF' : 'rgba(255,255,255,0.6)'}
+              />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuSection}>
-          {menuItems.map((item) => {
-            const isActive = state.routes[state.index]?.name === item.route;
-            return (
-              <TouchableOpacity
-                key={item.route}
-                style={[styles.menuItem, isActive && styles.menuItemActive]}
-                onPress={() => navigation.navigate(item.route)}
-              >
-                <Text style={[styles.menuLabel, isActive && styles.menuLabelActive]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </DrawerContentScrollView>
-
-      {/* Logout at bottom */}
-      <View style={styles.footer}>
-        <View style={styles.divider} />
-        <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
+      {/* Bottom section - Logout */}
+      <View style={styles.bottomSection}>
+        <TouchableOpacity style={styles.navItem} onPress={onLogout}>
+          <Ionicons name="log-out-outline" size={22} color="rgba(255,255,255,0.6)" />
         </TouchableOpacity>
       </View>
     </View>
@@ -81,82 +74,42 @@ export default function CustomDrawerContent({ user, onLogout, state, navigation 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingTop: 16,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
     alignItems: 'center',
+    paddingVertical: 16,
   },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  logoSection: {
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  logoCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  avatarText: {
-    fontSize: 24,
-    fontFamily: 'Inter_700Bold',
-    color: '#fff',
+  logoText: {
+    fontSize: 20,
+    fontFamily: 'Oswald_700Bold',
+    color: '#FFFFFF',
   },
-  userName: {
-    fontSize: 18,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: 'rgba(255,255,255,0.5)',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginHorizontal: 20,
-    marginVertical: 8,
-  },
-  menuSection: {
-    paddingHorizontal: 12,
+  navSection: {
+    flex: 1,
     paddingTop: 8,
+    gap: 4,
   },
-  menuItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+  navItem: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    marginBottom: 4,
-  },
-  menuItemActive: {
-    backgroundColor: 'rgba(61,123,95,0.25)',
-  },
-  menuLabel: {
-    fontSize: 16,
-    fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.7)',
-  },
-  menuLabelActive: {
-    color: '#4a9d7a',
-    fontFamily: 'Inter_600SemiBold',
-  },
-  footer: {
-    paddingBottom: 40,
-  },
-  logoutButton: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  logoutText: {
-    fontSize: 15,
-    fontFamily: 'Inter_500Medium',
-    color: 'rgba(255,255,255,0.7)',
+  navItemActive: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  bottomSection: {
+    paddingBottom: 24,
   },
 });

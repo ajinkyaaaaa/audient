@@ -26,7 +26,7 @@ audient/
 | Frontend | Expo SDK 54, React 19, React Native, TypeScript |
 | Backend  | FastAPI, asyncpg, bcrypt, PyJWT, pydantic-settings |
 | Database | PostgreSQL (`audient` db, user: `ajinkyakarnik`, host: localhost) |
-| Fonts    | Inter (via @expo-google-fonts/inter)             |
+| Fonts    | Oswald (via @expo-google-fonts/oswald)            |
 | Styling  | React Native StyleSheet (no CSS framework)       |
 
 ## Running the App
@@ -149,10 +149,13 @@ CREATE TABLE stakeholders (
 - Passwords hashed with bcrypt directly (not passlib — incompatible with bcrypt 5.x)
 - JWT tokens: HS256, 7-day expiry, payload contains `{id, email, exp, iat}`
 - Auth flow: register redirects to login page (no auto-login after register)
-- HomeScreen shows "Welcome" on first login, "Welcome back" on subsequent logins
-- Navigation: `@react-navigation/drawer` with custom dark-green-themed drawer content
+- HomeScreen is a KPI dashboard with greeting, 4 metric cards, recent engagements table, recent recordings, and location profiles
+- Navigation: `@react-navigation/drawer` with permanent 64px icon ribbon sidebar (Ionicons)
 - Maps: platform-split — `.tsx` for native (react-native-maps), `.web.tsx` for web (react-leaflet + CartoDB Voyager tiles)
-- Light green theme: `#f5f5f0` page bg, `#ffffff` cards with `#e5e7eb` borders, `#3d7b5f`→`#4a9d7a` green accents, `#2d4a3e`→`#1f3830` dark green drawer
+- Theme: `#FDFBD4` page bg, `#FFFFFF` cards with `#E8DCC0` borders, `#C05800`→`#A04800` burnt orange accents, `#C05800`→`#8B3E00` sidebar gradient
+- Font: Oswald (400 Regular, 500 Medium, 600 SemiBold, 700 Bold) via `@expo-google-fonts/oswald`
+- Text colors: `#1a1a1a` primary, `#6B5540` secondary, `#A89070` tertiary
+- Form inputs: `#FFF9E6` background, `#D4C8A0` border
 - Location profiles: one base per user (enforced server-side), unlimited client locations
 - Engagements: nested stack navigator inside drawer for list → detail transitions (`@react-navigation/native-stack`)
 - Client engagement_health defaults to "Neutral" on creation

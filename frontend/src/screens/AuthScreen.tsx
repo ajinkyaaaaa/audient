@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { useFonts, Oswald_400Regular, Oswald_500Medium, Oswald_600SemiBold, Oswald_700Bold } from '@expo-google-fonts/oswald';
 import { login, register } from '../services/api';
 
 const VIDEO_URL = 'https://assets.mixkit.co/videos/preview/mixkit-abstract-technology-network-connections-27611-large.mp4';
@@ -67,10 +67,10 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
   const [loading, setLoading] = useState(false);
 
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Oswald_400Regular,
+    Oswald_500Medium,
+    Oswald_600SemiBold,
+    Oswald_700Bold,
   });
 
   const handleSubmit = async () => {
@@ -186,7 +186,7 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
                 <TextInput
                   style={styles.input}
                   placeholder="Full Name"
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor="#A89070"
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
@@ -196,7 +196,7 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
               <TextInput
                 style={styles.input}
                 placeholder="Email"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -206,7 +206,7 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
               <TextInput
                 style={styles.input}
                 placeholder="Password"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -216,7 +216,7 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
                 <TextInput
                   style={styles.input}
                   placeholder="Confirm Password"
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor="#A89070"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry
@@ -235,7 +235,7 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
                 disabled={loading}
               >
                 <LinearGradient
-                  colors={['#3d7b5f', '#4a9d7a']}
+                  colors={['#C05800', '#A04800']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.submitGradient}
@@ -311,13 +311,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(61,123,95,0.5)',
-    backgroundColor: 'rgba(61,123,95,0.2)',
+    borderColor: 'rgba(192,88,0,0.5)',
+    backgroundColor: 'rgba(192,88,0,0.2)',
   },
   headerButtonText: {
     color: '#fff',
     fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Oswald_500Medium',
   },
   content: {
     flex: 1,
@@ -333,20 +333,20 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 56,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'Oswald_700Bold',
     color: '#fff',
     letterSpacing: 3,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Oswald_400Regular',
     color: 'rgba(255,255,255,0.7)',
     marginBottom: 32,
   },
   formCard: {
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: 'rgba(253,251,212,0.95)',
     borderRadius: 20,
     padding: 24,
   },
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   successText: {
     color: '#22c55e',
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Oswald_400Regular',
     textAlign: 'center',
   },
   errorContainer: {
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#ef4444',
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Oswald_400Regular',
     textAlign: 'center',
   },
   form: {
@@ -386,15 +386,15 @@ const styles = StyleSheet.create({
   input: {
     width: '100%',
     height: 56,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#FFF9E6',
     borderRadius: 12,
     paddingHorizontal: 20,
     fontSize: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Oswald_400Regular',
     color: '#1a1a1a',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#D4C8A0',
   },
   forgotButton: {
     alignSelf: 'flex-end',
@@ -402,9 +402,9 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   forgotText: {
-    color: '#4a5568',
+    color: '#6B5540',
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Oswald_400Regular',
   },
   submitButton: {
     width: '100%',
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   submitText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
   },
   socialSection: {
     width: '100%',
@@ -436,12 +436,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#D4C8A0',
   },
   dividerText: {
-    color: '#9ca3af',
+    color: '#A89070',
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Oswald_400Regular',
     marginHorizontal: 16,
   },
   socialButtons: {
@@ -453,15 +453,15 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#FFF9E6',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#D4C8A0',
   },
   socialIcon: {
     fontSize: 20,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
     color: '#1a1a1a',
   },
 });

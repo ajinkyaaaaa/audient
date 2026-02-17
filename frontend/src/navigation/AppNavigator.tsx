@@ -1,5 +1,4 @@
 import React from 'react';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { DrawerParamList } from './types';
@@ -26,17 +25,19 @@ const Drawer = createDrawerNavigator<DrawerParamList>();
 
 export default function AppNavigator({ user, token, onLogout }: Props) {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
-        <Drawer.Navigator
+    <NavigationContainer>
+      <Drawer.Navigator
           screenOptions={{
             headerShown: false,
-            drawerType: 'front',
+            drawerType: 'permanent',
             drawerStyle: {
-              width: 280,
+              width: 64,
               backgroundColor: 'transparent',
             },
-            overlayColor: 'rgba(0,0,0,0.6)',
+            overlayColor: 'transparent',
+            sceneContainerStyle: {
+              backgroundColor: '#FDFBD4',
+            },
           }}
           drawerContent={(props) => (
             <CustomDrawerContent {...props} user={user} onLogout={onLogout} />
@@ -53,7 +54,6 @@ export default function AppNavigator({ user, token, onLogout }: Props) {
           </Drawer.Screen>
           <Drawer.Screen name="Tasks" component={TasksScreen} />
         </Drawer.Navigator>
-      </NavigationContainer>
-    </GestureHandlerRootView>
+    </NavigationContainer>
   );
 }

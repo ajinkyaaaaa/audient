@@ -9,20 +9,25 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Audio } from 'expo-av';
+import { Ionicons } from '@expo/vector-icons';
 import {
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+  Oswald_400Regular,
+  Oswald_500Medium,
+  Oswald_600SemiBold,
+  Oswald_700Bold,
+} from '@expo-google-fonts/oswald';
 import {
   createRecording,
   getRecordings,
+  getClients,
+  getLocationProfiles,
   Recording,
+  Client,
+  LocationProfile,
 } from '../services/api';
 import { HomeStackParamList } from '../navigation/types';
 
@@ -33,42 +38,48 @@ type HomeScreenProps = {
 };
 
 export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
-  const drawerNav = useNavigation();
   const stackNav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Oswald_400Regular,
+    Oswald_500Medium,
+    Oswald_600SemiBold,
+    Oswald_700Bold,
   });
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Recordings list
+  // Dashboard data
   const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [loadingRecordings, setLoadingRecordings] = useState(true);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [locations, setLocations] = useState<LocationProfile[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   // Refs
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
 
-  const loadRecordings = useCallback(async () => {
+  const loadDashboard = useCallback(async () => {
     try {
-      const data = await getRecordings(token);
-      setRecordings(data.recordings);
+      const [recData, clientData, locData] = await Promise.all([
+        getRecordings(token),
+        getClients(token),
+        getLocationProfiles(token),
+      ]);
+      setRecordings(recData.recordings);
+      setClients(clientData.clients);
+      setLocations(locData.profiles);
     } catch {} finally {
-      setLoadingRecordings(false);
+      setLoadingData(false);
     }
   }, [token]);
 
   useEffect(() => {
-    loadRecordings();
-  }, [loadRecordings]);
+    loadDashboard();
+  }, [loadDashboard]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -78,21 +89,12 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
   const startRecording = async () => {
     const { granted } = await Audio.requestPermissionsAsync();
     if (!granted) return;
-
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-    });
-
-    const { recording } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY
-    );
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+    const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
     recordingRef.current = recording;
-
     setElapsedSeconds(0);
     elapsedRef.current = 0;
     setIsRecording(true);
-
     timerRef.current = setInterval(() => {
       elapsedRef.current += 1;
       setElapsedSeconds(elapsedRef.current);
@@ -100,138 +102,181 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
   };
 
   const stopRecording = async () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    if (recordingRef.current) {
-      await recordingRef.current.stopAndUnloadAsync();
-      recordingRef.current = null;
-    }
-
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (recordingRef.current) { await recordingRef.current.stopAndUnloadAsync(); recordingRef.current = null; }
     await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
     setIsRecording(false);
-
-    // Auto-save the recording
     try {
       await createRecording(token, { duration_seconds: elapsedRef.current });
-      await loadRecordings();
+      await loadDashboard();
     } catch {}
-
     setElapsedSeconds(0);
     elapsedRef.current = 0;
   };
 
-  const formatDuration = (s: number) => {
+  const fmt = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const formatDate = (iso: string) => {
+  const fmtDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   if (!fontsLoaded) return null;
 
-  const openDrawer = () => drawerNav.dispatch(DrawerActions.openDrawer());
+  const activeClients = clients.filter(c => c.is_active).length;
+  const healthyClients = clients.filter(c => c.engagement_health === 'Good').length;
+  const healthPct = clients.length > 0 ? Math.round((healthyClients / clients.length) * 100) : 0;
+
+  const healthColor: Record<string, string> = { Good: '#16A34A', Neutral: '#D97706', Risk: '#DC2626' };
+
+  const kpis = [
+    { label: 'ENGAGEMENTS', value: activeClients.toString(), sub: 'Active Clients', badge: 'active', change: '+12.5%', up: true },
+    { label: 'RECORDINGS', value: recordings.length.toString(), sub: 'Total Captured', badge: 'total', change: '+8.3%', up: true },
+    { label: 'LOCATIONS', value: locations.length.toString(), sub: 'Sites Tracked', badge: 'tracked', change: '+5.2%', up: true },
+    { label: 'HEALTH', value: `${healthPct}%`, sub: 'Clients Good', badge: 'score', change: '-3.1%', up: false },
+  ];
+
+  const firstName = user.name.split(' ')[0];
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
-          <View style={styles.hamburgerBar} />
-          <View style={styles.hamburgerBar} />
-          <View style={styles.hamburgerBar} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Audient</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Hello, {firstName}!</Text>
+            <Text style={styles.subGreeting}>What are you looking for today?</Text>
+          </View>
+          <View style={styles.headerRight}>
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>Live Dashboard</Text>
+            </View>
+          </View>
+        </View>
 
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
-        {/* Mic Tile */}
-        <View style={styles.micSection}>
-          <TouchableOpacity
-            style={[styles.micTile, isRecording && styles.micTileRecording]}
-            onPress={isRecording ? stopRecording : startRecording}
-            activeOpacity={0.7}
-          >
-            <LinearGradient
-              colors={isRecording ? ['#ef4444', '#dc2626'] : ['#3d7b5f', '#4a9d7a']}
-              style={styles.micGradient}
-            >
-              {/* Mic icon using styled views */}
-              <View style={styles.micIcon}>
-                <View style={styles.micBody} />
-                <View style={styles.micBase} />
-                <View style={styles.micStand} />
+        {/* KPI Cards */}
+        {loadingData ? (
+          <ActivityIndicator color="#C05800" style={{ marginTop: 32 }} />
+        ) : (
+          <View style={styles.kpiRow}>
+            {kpis.map((kpi) => (
+              <View key={kpi.label} style={styles.kpiCard}>
+                <LinearGradient colors={['#C05800', '#A04800']} style={StyleSheet.absoluteFill} />
+                <View style={styles.kpiTop}>
+                  <Text style={styles.kpiLabel}>{kpi.label}</Text>
+                  <View style={styles.kpiBadge}>
+                    <Text style={styles.kpiBadgeText}>{kpi.badge}</Text>
+                  </View>
+                </View>
+                <Text style={styles.kpiValue}>{kpi.value}</Text>
+                <View style={styles.kpiBottom}>
+                  <Text style={styles.kpiSub}>{kpi.sub}</Text>
+                  <Text style={[styles.kpiChange, !kpi.up && styles.kpiChangeDown]}>
+                    {kpi.up ? '▲' : '▼'} {kpi.change}
+                  </Text>
+                </View>
               </View>
-            </LinearGradient>
-          </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
-          {isRecording && (
-            <View style={styles.recordingIndicator}>
-              <View style={styles.recordingDot} />
-              <Text style={styles.recordingText}>Recording {formatDuration(elapsedSeconds)}</Text>
-            </View>
-          )}
-
-          {!isRecording && (
-            <Text style={styles.micHint}>Tap to start recording</Text>
-          )}
-
-          {isRecording && (
-            <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
-              <View style={styles.stopSquare} />
-              <Text style={styles.stopButtonText}>Stop</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Recordings List */}
-        <View style={styles.recordingsSection}>
-          <Text style={styles.sectionTitle}>
-            Recordings{recordings.length > 0 ? ` (${recordings.length})` : ''}
-          </Text>
-
-          {loadingRecordings ? (
-            <ActivityIndicator color="#3d7b5f" style={{ marginTop: 20 }} />
-          ) : recordings.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No recordings yet</Text>
-              <Text style={styles.emptySubtext}>Your submitted recordings will appear here</Text>
-            </View>
-          ) : (
-            recordings.map((r) => (
-              <TouchableOpacity
-                key={r.id}
-                style={styles.recordingRow}
-                activeOpacity={0.7}
-                onPress={() => stackNav.navigate('RecordingDetail', { recordingId: r.id })}
-              >
-                <View style={styles.recordingLeft}>
-                  <View style={styles.recordingIconSmall}>
-                    <View style={styles.micBodySmall} />
+        {/* Two Column Layout */}
+        {!loadingData && (
+          <View style={styles.columnsRow}>
+            {/* Recent Engagements */}
+            <View style={[styles.sectionCard, { flex: 1, marginRight: 8 }]}>
+              <Text style={styles.sectionTitle}>Recent Engagements</Text>
+              {clients.length === 0 ? (
+                <Text style={styles.emptyText}>No engagements yet</Text>
+              ) : (
+                <View style={styles.table}>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, { flex: 2 }]}>Client</Text>
+                    <Text style={[styles.tableHeaderText, { flex: 1 }]}>Code</Text>
+                    <Text style={[styles.tableHeaderText, { flex: 1 }]}>Health</Text>
+                    <Text style={[styles.tableHeaderText, { flex: 1 }]}>Tier</Text>
                   </View>
-                  <View style={styles.recordingMeta}>
-                    <Text style={styles.recordingTitle} numberOfLines={1}>
-                      Recording · {formatDuration(r.duration_seconds || 0)}
-                    </Text>
-                    <Text style={styles.recordingDate}>
-                      {formatDate(r.created_at)} · {formatDuration(r.duration_seconds || 0)}
-                    </Text>
-                  </View>
+                  {clients.slice(0, 6).map((c) => (
+                    <View key={c.id} style={styles.tableRow}>
+                      <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={[styles.healthDot, { backgroundColor: healthColor[c.engagement_health] || '#D97706' }]} />
+                        <Text style={styles.tableCell} numberOfLines={1}>{c.client_name}</Text>
+                      </View>
+                      <Text style={[styles.tableCellLight, { flex: 1 }]}>{c.client_code}</Text>
+                      <Text style={[styles.tableCell, { flex: 1, color: healthColor[c.engagement_health] || '#D97706' }]}>
+                        {c.engagement_health}
+                      </Text>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.tierPill}>
+                          <Text style={styles.tierPillText}>{c.client_tier}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
                 </View>
-                <View style={styles.recordingArrow}>
-                  <Text style={styles.arrowText}>{'>'}</Text>
+              )}
+            </View>
+
+            {/* Recent Recordings */}
+            <View style={[styles.sectionCard, { flex: 1, marginLeft: 8 }]}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Recent Recordings</Text>
+                <TouchableOpacity
+                  style={[styles.recButton, isRecording && styles.recButtonActive]}
+                  onPress={isRecording ? stopRecording : startRecording}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={isRecording ? 'stop' : 'mic'} size={14} color="#FFFFFF" />
+                  <Text style={styles.recButtonText}>
+                    {isRecording ? `Stop ${fmt(elapsedSeconds)}` : 'Record'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {recordings.length === 0 ? (
+                <Text style={styles.emptyText}>No recordings yet</Text>
+              ) : (
+                recordings.slice(0, 6).map((r) => (
+                  <TouchableOpacity
+                    key={r.id}
+                    style={styles.recRow}
+                    onPress={() => stackNav.navigate('RecordingDetail', { recordingId: r.id })}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.recIcon}>
+                      <Ionicons name="mic" size={14} color="#C05800" />
+                    </View>
+                    <View style={styles.recMeta}>
+                      <Text style={styles.recTitle}>Recording · {fmt(r.duration_seconds || 0)}</Text>
+                      <Text style={styles.recDate}>{fmtDate(r.created_at)}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#A89070" />
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Location Summary */}
+        {!loadingData && locations.length > 0 && (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Location Profiles</Text>
+            <View style={styles.locGrid}>
+              {locations.slice(0, 4).map((loc) => (
+                <View key={loc.id} style={styles.locChip}>
+                  <View style={[styles.locTypeDot, loc.type === 'base' ? styles.locBase : styles.locClient]} />
+                  <Text style={styles.locName} numberOfLines={1}>{loc.name}</Text>
+                  <Text style={styles.locType}>{loc.type === 'base' ? 'Base' : 'Client'}</Text>
                 </View>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -240,228 +285,289 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f0',
+    backgroundColor: '#FDFBD4',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-  },
-  hamburger: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  hamburgerBar: {
-    width: 22,
-    height: 2,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 1,
-    marginVertical: 2.5,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontFamily: 'Inter_700Bold',
-    color: '#1a1a1a',
-    letterSpacing: 2,
-  },
-  headerRight: {
-    width: 36,
-  },
-  scrollArea: {
-    flex: 1,
-  },
+  scroll: { flex: 1 },
   scrollContent: {
+    padding: 24,
+    paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
     paddingBottom: 40,
   },
 
-  // Mic Section
-  micSection: {
-    alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 16,
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
   },
-  micTile: {
-    borderRadius: 48,
-    overflow: 'hidden',
-    elevation: 8,
-    shadowColor: '#3d7b5f',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+  greeting: {
+    fontSize: 28,
+    fontFamily: 'Oswald_700Bold',
+    color: '#1a1a1a',
   },
-  micTileRecording: {
-    shadowColor: '#ef4444',
+  subGreeting: {
+    fontSize: 14,
+    fontFamily: 'Oswald_400Regular',
+    color: '#6B5540',
+    marginTop: 4,
   },
-  micGradient: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerRight: {
+    alignItems: 'flex-end',
   },
-  micIcon: {
-    alignItems: 'center',
-  },
-  micBody: {
-    width: 20,
-    height: 30,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-  },
-  micBase: {
-    width: 32,
-    height: 16,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    borderWidth: 2.5,
-    borderTopWidth: 0,
-    borderColor: '#fff',
-    marginTop: -2,
-  },
-  micStand: {
-    width: 2.5,
-    height: 6,
-    backgroundColor: '#fff',
-  },
-  recordingIndicator: {
+  liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    backgroundColor: 'rgba(192,88,0,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(192,88,0,0.25)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  recordingDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#ef4444',
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#C05800',
     marginRight: 8,
   },
-  recordingText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#ef4444',
-  },
-  micHint: {
-    marginTop: 16,
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: '#9ca3af',
-  },
-  stopButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    borderRadius: 24,
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
-  },
-  stopSquare: {
-    width: 14,
-    height: 14,
-    borderRadius: 2,
-    backgroundColor: '#ef4444',
-    marginRight: 10,
-  },
-  stopButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#ef4444',
+  liveText: {
+    fontSize: 12,
+    fontFamily: 'Oswald_500Medium',
+    color: '#C05800',
   },
 
-  // Recordings List
-  recordingsSection: {
-    marginTop: 24,
-    paddingHorizontal: 16,
+  // KPI Cards
+  kpiRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  kpiCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 16,
+    overflow: 'hidden',
+    minHeight: 120,
+    justifyContent: 'space-between',
+  },
+  kpiTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  kpiLabel: {
+    fontSize: 11,
+    fontFamily: 'Oswald_600SemiBold',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1,
+  },
+  kpiBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  kpiBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Oswald_500Medium',
+    color: '#FFFFFF',
+  },
+  kpiValue: {
+    fontSize: 32,
+    fontFamily: 'Oswald_700Bold',
+    color: '#FFFFFF',
+  },
+  kpiBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  kpiSub: {
+    fontSize: 11,
+    fontFamily: 'Oswald_400Regular',
+    color: 'rgba(255,255,255,0.6)',
+  },
+  kpiChange: {
+    fontSize: 11,
+    fontFamily: 'Oswald_600SemiBold',
+    color: '#BBF7D0',
+  },
+  kpiChangeDown: {
+    color: '#FECACA',
+  },
+
+  // Section Cards
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+    padding: 20,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    fontFamily: 'Oswald_700Bold',
     color: '#1a1a1a',
     marginBottom: 16,
   },
-  emptyState: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 32,
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
   },
   emptyText: {
-    fontSize: 15,
-    fontFamily: 'Inter_500Medium',
-    color: '#4a5568',
+    fontSize: 13,
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+
+  // Columns
+  columnsRow: {
+    flexDirection: 'row',
+    marginBottom: 0,
+  },
+
+  // Table
+  table: {},
+  tableHeader: {
+    flexDirection: 'row',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0E8D0',
     marginBottom: 4,
   },
-  emptySubtext: {
+  tableHeaderText: {
+    fontSize: 11,
+    fontFamily: 'Oswald_600SemiBold',
+    color: '#A89070',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FAF5E4',
+  },
+  tableCell: {
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_500Medium',
+    color: '#1a1a1a',
   },
-  recordingRow: {
+  tableCellLight: {
+    fontSize: 13,
+    fontFamily: 'Oswald_400Regular',
+    color: '#6B5540',
+  },
+  healthDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  tierPill: {
+    backgroundColor: 'rgba(192,88,0,0.1)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+  },
+  tierPillText: {
+    fontSize: 10,
+    fontFamily: 'Oswald_500Medium',
+    color: '#C05800',
+  },
+
+  // Record Button
+  recButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
+    backgroundColor: '#C05800',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
   },
-  recordingLeft: {
+  recButtonActive: {
+    backgroundColor: '#DC2626',
+  },
+  recButtonText: {
+    fontSize: 12,
+    fontFamily: 'Oswald_600SemiBold',
+    color: '#FFFFFF',
+  },
+
+  // Recording Rows
+  recRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FAF5E4',
   },
-  recordingIconSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(61,123,95,0.15)',
+  recIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(192,88,0,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  micBodySmall: {
-    width: 10,
-    height: 16,
-    backgroundColor: '#3d7b5f',
-    borderRadius: 5,
-  },
-  recordingMeta: {
-    flex: 1,
-  },
-  recordingTitle: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+  recMeta: { flex: 1 },
+  recTitle: {
+    fontSize: 13,
+    fontFamily: 'Oswald_500Medium',
     color: '#1a1a1a',
-    marginBottom: 2,
   },
-  recordingDate: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: '#9ca3af',
+  recDate: {
+    fontSize: 11,
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
+    marginTop: 2,
   },
-  recordingArrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#f5f5f0',
-    justifyContent: 'center',
+
+  // Location chips
+  locGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  locChip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    backgroundColor: '#FFF9E6',
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
   },
-  arrowText: {
-    color: '#9ca3af',
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
+  locTypeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  locBase: { backgroundColor: '#C05800' },
+  locClient: { backgroundColor: '#16A34A' },
+  locName: {
+    fontSize: 13,
+    fontFamily: 'Oswald_500Medium',
+    color: '#1a1a1a',
+  },
+  locType: {
+    fontSize: 10,
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
   },
 });

@@ -11,15 +11,15 @@ import {
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+  Oswald_400Regular,
+  Oswald_500Medium,
+  Oswald_600SemiBold,
+  Oswald_700Bold,
+} from '@expo-google-fonts/oswald';
 import { createClient, getClients, Client } from '../services/api';
 import { EngagementsStackParamList } from '../navigation/types';
 
@@ -36,14 +36,13 @@ const healthColor: Record<string, string> = {
 };
 
 export default function EngagementsScreen({ token }: Props) {
-  const drawerNav = useNavigation();
   const stackNav = useNavigation<NativeStackNavigationProp<EngagementsStackParamList>>();
 
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Oswald_400Regular,
+    Oswald_500Medium,
+    Oswald_600SemiBold,
+    Oswald_700Bold,
   });
 
   const [clients, setClients] = useState<Client[]>([]);
@@ -123,25 +122,17 @@ export default function EngagementsScreen({ token }: Props) {
 
   if (!fontsLoaded) return null;
 
-  const openDrawer = () => drawerNav.dispatch(DrawerActions.openDrawer());
-
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
-          <View style={styles.hamburgerBar} />
-          <View style={styles.hamburgerBar} />
-          <View style={styles.hamburgerBar} />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Engagements</Text>
-        <View style={styles.headerRight} />
       </View>
 
       {/* Client List */}
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#3d7b5f" />
+          <ActivityIndicator size="large" color="#C05800" />
         </View>
       ) : clients.length === 0 ? (
         <View style={styles.centered}>
@@ -208,7 +199,7 @@ export default function EngagementsScreen({ token }: Props) {
         onPress={() => { resetForm(); setShowForm(true); }}
         activeOpacity={0.8}
       >
-        <LinearGradient colors={['#3d7b5f', '#4a9d7a']} style={styles.fabGradient}>
+        <LinearGradient colors={['#C05800', '#A04800']} style={styles.fabGradient}>
           <Text style={styles.fabText}>+</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -230,7 +221,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. Acme Corporation"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={formClientName}
                 onChangeText={setFormClientName}
               />
@@ -240,7 +231,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. ACME"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={formClientCode}
                 onChangeText={setFormClientCode}
                 autoCapitalize="characters"
@@ -251,7 +242,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. Technology, Healthcare"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={formIndustry}
                 onChangeText={setFormIndustry}
               />
@@ -261,7 +252,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. 50-200, Enterprise"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={formCompanySize}
                 onChangeText={setFormCompanySize}
               />
@@ -271,7 +262,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. New York, NY"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={formHqLocation}
                 onChangeText={setFormHqLocation}
               />
@@ -281,7 +272,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. San Francisco, CA"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={formOfficeLocation}
                 onChangeText={setFormOfficeLocation}
               />
@@ -291,7 +282,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. acme.com"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={formWebsite}
                 onChangeText={setFormWebsite}
                 autoCapitalize="none"
@@ -324,7 +315,7 @@ export default function EngagementsScreen({ token }: Props) {
                 disabled={formSubmitting}
               >
                 <LinearGradient
-                  colors={['#3d7b5f', '#4a9d7a']}
+                  colors={['#C05800', '#A04800']}
                   style={styles.submitButtonGradient}
                 >
                   {formSubmitting ? (
@@ -345,37 +336,18 @@ export default function EngagementsScreen({ token }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f0',
+    backgroundColor: '#FDFBD4',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
     paddingHorizontal: 24,
     paddingBottom: 16,
   },
-  hamburger: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  hamburgerBar: {
-    width: 22,
-    height: 2,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 1,
-    marginVertical: 2.5,
-  },
   headerTitle: {
     fontSize: 24,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'Oswald_700Bold',
     color: '#1a1a1a',
     letterSpacing: 2,
-  },
-  headerRight: {
-    width: 36,
   },
   centered: {
     flex: 1,
@@ -385,14 +357,14 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    fontFamily: 'Inter_500Medium',
-    color: '#4a5568',
+    fontFamily: 'Oswald_500Medium',
+    color: '#6B5540',
     marginBottom: 6,
   },
   emptySubtext: {
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
     textAlign: 'center',
   },
   list: {
@@ -405,9 +377,9 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E8DCC0',
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
@@ -427,7 +399,7 @@ const styles = StyleSheet.create({
   },
   clientName: {
     fontSize: 17,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
     color: '#1a1a1a',
     marginRight: 8,
   },
@@ -438,22 +410,22 @@ const styles = StyleSheet.create({
   },
   clientCode: {
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
     marginTop: 2,
   },
   cardRight: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f5f5f0',
+    backgroundColor: '#FAF5E4',
     justifyContent: 'center',
     alignItems: 'center',
   },
   arrowText: {
-    color: '#9ca3af',
+    color: '#A89070',
     fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
   },
   cardMeta: {
     flexDirection: 'row',
@@ -465,20 +437,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#f5f5f0',
+    backgroundColor: '#FAF5E4',
   },
   tierTag: {
-    backgroundColor: 'rgba(61,123,95,0.12)',
+    backgroundColor: 'rgba(192,88,0,0.1)',
   },
   metaTagText: {
     fontSize: 11,
-    fontFamily: 'Inter_500Medium',
-    color: '#4a5568',
+    fontFamily: 'Oswald_500Medium',
+    color: '#6B5540',
   },
   tierTagText: {
     fontSize: 11,
-    fontFamily: 'Inter_500Medium',
-    color: '#3d7b5f',
+    fontFamily: 'Oswald_500Medium',
+    color: '#C05800',
   },
   statusTag: {
     paddingHorizontal: 10,
@@ -493,7 +465,7 @@ const styles = StyleSheet.create({
   },
   statusTagText: {
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
   },
   activeTagText: {
     color: '#22c55e',
@@ -503,8 +475,8 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
     marginTop: 4,
   },
 
@@ -516,7 +488,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: '#3d7b5f',
+    shadowColor: '#C05800',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -531,7 +503,7 @@ const styles = StyleSheet.create({
   fabText: {
     color: '#fff',
     fontSize: 28,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
     marginTop: -2,
   },
 
@@ -542,7 +514,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -556,17 +528,17 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#E8DCC0',
   },
   modalTitle: {
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'Oswald_700Bold',
     color: '#1a1a1a',
   },
   modalClose: {
     fontSize: 20,
-    color: '#9ca3af',
-    fontFamily: 'Inter_500Medium',
+    color: '#A89070',
+    fontFamily: 'Oswald_500Medium',
     padding: 4,
   },
   formScroll: {
@@ -574,20 +546,20 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#4a5568',
+    fontFamily: 'Oswald_600SemiBold',
+    color: '#6B5540',
     marginBottom: 8,
     marginTop: 16,
   },
   formInput: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#FFF9E6',
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#D4C8A0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Oswald_400Regular',
     color: '#1a1a1a',
   },
   tierSelector: {
@@ -599,26 +571,26 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    backgroundColor: '#f9fafb',
+    borderColor: '#D4C8A0',
+    backgroundColor: '#FFF9E6',
     alignItems: 'center',
   },
   tierOptionActive: {
-    borderColor: '#3d7b5f',
-    backgroundColor: 'rgba(61,123,95,0.1)',
+    borderColor: '#C05800',
+    backgroundColor: 'rgba(192,88,0,0.1)',
   },
   tierOptionText: {
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_500Medium',
+    color: '#A89070',
   },
   tierOptionTextActive: {
-    color: '#3d7b5f',
-    fontFamily: 'Inter_600SemiBold',
+    color: '#C05800',
+    fontFamily: 'Oswald_600SemiBold',
   },
   formErrorText: {
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Oswald_500Medium',
     color: '#ef4444',
     marginTop: 16,
     textAlign: 'center',
@@ -635,7 +607,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
     color: '#fff',
   },
 });

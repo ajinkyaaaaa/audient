@@ -12,13 +12,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+  Oswald_400Regular,
+  Oswald_500Medium,
+  Oswald_600SemiBold,
+  Oswald_700Bold,
+} from '@expo-google-fonts/oswald';
 import {
   getClient,
   getStakeholders,
@@ -42,10 +43,10 @@ const healthColor: Record<string, string> = {
 export default function ClientDetailScreen({ token, clientId }: Props) {
   const navigation = useNavigation();
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Oswald_400Regular,
+    Oswald_500Medium,
+    Oswald_600SemiBold,
+    Oswald_700Bold,
   });
 
   const [client, setClient] = useState<Client | null>(null);
@@ -126,7 +127,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#3d7b5f" />
+          <ActivityIndicator size="large" color="#C05800" />
         </View>
       </View>
     );
@@ -149,10 +150,10 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>{'<'}</Text>
+          <Ionicons name="arrow-back" size={18} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{client.client_name}</Text>
-        <View style={styles.headerRight} />
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
@@ -255,7 +256,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
           <Text style={styles.sectionTitle}>Visit History</Text>
         </View>
         <View style={styles.visitPlaceholder}>
-          <Text style={styles.visitPlaceholderIcon}>{'[ ]'}</Text>
+          <Ionicons name="calendar-outline" size={28} color="#D4C8A0" style={{ marginBottom: 12 }} />
           <Text style={styles.visitPlaceholderTitle}>Coming Soon</Text>
           <Text style={styles.visitPlaceholderText}>
             Visit logs and check-in history will appear here once the feature is enabled.
@@ -279,7 +280,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="Full name"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={shName}
                 onChangeText={setShName}
               />
@@ -288,7 +289,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. VP Engineering"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={shRole}
                 onChangeText={setShRole}
               />
@@ -297,7 +298,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="email@company.com"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={shEmail}
                 onChangeText={setShEmail}
                 keyboardType="email-address"
@@ -308,7 +309,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="+1 555-0100"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={shPhone}
                 onChangeText={setShPhone}
                 keyboardType="phone-pad"
@@ -318,7 +319,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={[styles.formInput, styles.formInputMultiline]}
                 placeholder="Any relevant notes"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#A89070"
                 value={shNotes}
                 onChangeText={setShNotes}
                 multiline
@@ -335,7 +336,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
                 disabled={shSubmitting}
               >
                 <LinearGradient
-                  colors={['#3d7b5f', '#4a9d7a']}
+                  colors={['#C05800', '#A04800']}
                   style={styles.submitButtonGradient}
                 >
                   {shSubmitting ? (
@@ -356,7 +357,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f0',
+    backgroundColor: '#FDFBD4',
   },
   centered: {
     flex: 1,
@@ -365,8 +366,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    fontFamily: 'Inter_500Medium',
-    color: '#4a5568',
+    fontFamily: 'Oswald_500Medium',
+    color: '#6B5540',
   },
   header: {
     flexDirection: 'row',
@@ -380,27 +381,19 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  backText: {
-    color: '#1a1a1a',
-    fontSize: 18,
-    fontFamily: 'Inter_600SemiBold',
+    borderColor: '#E8DCC0',
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'Oswald_700Bold',
     color: '#1a1a1a',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 12,
-  },
-  headerRight: {
-    width: 36,
   },
   scrollArea: {
     flex: 1,
@@ -412,9 +405,9 @@ const styles = StyleSheet.create({
 
   // Info Card
   infoCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E8DCC0',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -425,16 +418,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f0',
+    borderBottomColor: '#FAF5E4',
   },
   infoLabel: {
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_500Medium',
+    color: '#A89070',
   },
   infoValue: {
     fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
     color: '#1a1a1a',
   },
   healthRow: {
@@ -457,42 +450,42 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'Oswald_700Bold',
     color: '#1a1a1a',
   },
   addSmallButton: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 10,
-    backgroundColor: 'rgba(61,123,95,0.12)',
+    backgroundColor: 'rgba(192,88,0,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(61,123,95,0.3)',
+    borderColor: 'rgba(192,88,0,0.3)',
   },
   addSmallButtonText: {
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#3d7b5f',
+    fontFamily: 'Oswald_600SemiBold',
+    color: '#C05800',
   },
   emptySection: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E8DCC0',
     padding: 24,
     alignItems: 'center',
     marginBottom: 24,
   },
   emptySectionText: {
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
   },
 
   // Stakeholder Card
   stakeholderCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E8DCC0',
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
@@ -504,13 +497,13 @@ const styles = StyleSheet.create({
   },
   stakeholderName: {
     fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
     color: '#1a1a1a',
   },
   stakeholderRole: {
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: '#3d7b5f',
+    fontFamily: 'Oswald_400Regular',
+    color: '#C05800',
     marginTop: 2,
   },
   deleteBtn: {
@@ -524,47 +517,42 @@ const styles = StyleSheet.create({
   deleteBtnText: {
     color: '#ef4444',
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
   },
   stakeholderDetail: {
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: '#4a5568',
+    fontFamily: 'Oswald_400Regular',
+    color: '#6B5540',
     marginTop: 4,
   },
   stakeholderNotes: {
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
     marginTop: 6,
     fontStyle: 'italic',
   },
 
   // Visit History Placeholder
   visitPlaceholder: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#FFF9E6',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E8DCC0',
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
     marginBottom: 24,
   },
-  visitPlaceholderIcon: {
-    fontSize: 28,
-    color: '#d1d5db',
-    marginBottom: 12,
-  },
   visitPlaceholderTitle: {
     fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_600SemiBold',
+    color: '#A89070',
     marginBottom: 6,
   },
   visitPlaceholderText: {
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: '#9ca3af',
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -576,7 +564,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -590,17 +578,17 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#E8DCC0',
   },
   modalTitle: {
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'Oswald_700Bold',
     color: '#1a1a1a',
   },
   modalClose: {
     fontSize: 20,
-    color: '#9ca3af',
-    fontFamily: 'Inter_500Medium',
+    color: '#A89070',
+    fontFamily: 'Oswald_500Medium',
     padding: 4,
   },
   formScroll: {
@@ -608,20 +596,20 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#4a5568',
+    fontFamily: 'Oswald_600SemiBold',
+    color: '#6B5540',
     marginBottom: 8,
     marginTop: 16,
   },
   formInput: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#FFF9E6',
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#D4C8A0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Oswald_400Regular',
     color: '#1a1a1a',
   },
   formInputMultiline: {
@@ -630,7 +618,7 @@ const styles = StyleSheet.create({
   },
   formErrorText: {
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Oswald_500Medium',
     color: '#ef4444',
     marginTop: 16,
     textAlign: 'center',
@@ -647,7 +635,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Oswald_600SemiBold',
     color: '#fff',
   },
 });
