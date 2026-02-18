@@ -73,14 +73,25 @@ export default function GeoSenseScreen({ token }: Props) {
 
     setPermissionStatus('granted');
 
+    // Try cached position first for instant display
+    const lastKnown = await Location.getLastKnownPositionAsync();
+    if (lastKnown) {
+      setLocation({
+        latitude: lastKnown.coords.latitude,
+        longitude: lastKnown.coords.longitude,
+      });
+    }
+
+    // Get a quick fix with balanced accuracy (fast network/Wi-Fi)
     const current = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
+      accuracy: Location.Accuracy.Balanced,
     });
     setLocation({
       latitude: current.coords.latitude,
       longitude: current.coords.longitude,
     });
 
+    // Watch with high accuracy — refines position in the background
     if (subscriptionRef.current) {
       subscriptionRef.current.remove();
     }
@@ -187,7 +198,7 @@ export default function GeoSenseScreen({ token }: Props) {
         <View style={styles.mapContainer}>
           {permissionStatus === 'loading' || !location ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#C05800" />
+              <ActivityIndicator size="large" color="#3d7b5f" />
               <Text style={styles.loadingText}>Getting location...</Text>
             </View>
           ) : (
@@ -210,7 +221,7 @@ export default function GeoSenseScreen({ token }: Props) {
                       onPress={requestPermissionAndWatch}
                     >
                       <LinearGradient
-                        colors={['#C05800', '#A04800']}
+                        colors={['#3d7b5f', '#4a9d7a']}
                         style={styles.enableButtonGradient}
                       >
                         <Text style={styles.enableButtonText}>Enable</Text>
@@ -308,7 +319,7 @@ export default function GeoSenseScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. Office, Client HQ"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={formName}
                 onChangeText={setFormName}
               />
@@ -340,8 +351,8 @@ export default function GeoSenseScreen({ token }: Props) {
                 <Switch
                   value={formUseCurrentLocation}
                   onValueChange={setFormUseCurrentLocation}
-                  trackColor={{ false: '#D4C8A0', true: 'rgba(192,88,0,0.4)' }}
-                  thumbColor={formUseCurrentLocation ? '#C05800' : '#A89070'}
+                  trackColor={{ false: '#d1d5db', true: 'rgba(61,123,95,0.4)' }}
+                  thumbColor={formUseCurrentLocation ? '#3d7b5f' : '#9ca3af'}
                 />
               </View>
               {formUseCurrentLocation && location && (
@@ -364,7 +375,7 @@ export default function GeoSenseScreen({ token }: Props) {
                   <TextInput
                     style={[styles.formInput, styles.formInputMultiline]}
                     placeholder="Enter the full address"
-                    placeholderTextColor="#A89070"
+                    placeholderTextColor="#9ca3af"
                     value={formAddress}
                     onChangeText={setFormAddress}
                     multiline
@@ -384,7 +395,7 @@ export default function GeoSenseScreen({ token }: Props) {
                 disabled={formSubmitting}
               >
                 <LinearGradient
-                  colors={['#C05800', '#A04800']}
+                  colors={['#3d7b5f', '#4a9d7a']}
                   style={styles.submitButtonGradient}
                 >
                   {formSubmitting ? (
@@ -405,7 +416,7 @@ export default function GeoSenseScreen({ token }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDFBD4',
+    backgroundColor: '#f5f5f0',
   },
   header: {
     flexDirection: 'row',
@@ -425,14 +436,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    backgroundColor: 'rgba(61,123,95,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(192,88,0,0.3)',
+    borderColor: 'rgba(61,123,95,0.3)',
   },
   addButtonText: {
-    color: '#C05800',
+    color: '#3d7b5f',
     fontSize: 22,
     fontFamily: 'Oswald_600SemiBold',
     marginTop: -1,
@@ -457,16 +468,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF9E6',
+    backgroundColor: '#f9fafb',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -512,7 +523,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     borderRadius: 16,
     padding: 20,
   },
@@ -547,7 +558,7 @@ const styles = StyleSheet.create({
   coordLabel: {
     fontSize: 12,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
     marginBottom: 4,
   },
   coordValue: {
@@ -571,25 +582,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     padding: 32,
     alignItems: 'center',
   },
   emptyText: {
     fontSize: 15,
     fontFamily: 'Oswald_500Medium',
-    color: '#6B5540',
+    color: '#4a5568',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
   },
   profileCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     borderRadius: 14,
     padding: 16,
     marginBottom: 10,
@@ -617,7 +628,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   baseBadge: {
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    backgroundColor: 'rgba(61,123,95,0.1)',
   },
   clientBadge: {
     backgroundColor: 'rgba(34,197,94,0.15)',
@@ -627,7 +638,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Oswald_600SemiBold',
   },
   baseBadgeText: {
-    color: '#C05800',
+    color: '#3d7b5f',
   },
   clientBadgeText: {
     color: '#22c55e',
@@ -648,13 +659,13 @@ const styles = StyleSheet.create({
   profileDetail: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
-    color: '#6B5540',
+    color: '#4a5568',
     marginBottom: 4,
   },
   profileCoords: {
     fontSize: 12,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
   },
   profileCaptured: {
     fontSize: 11,
@@ -684,7 +695,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8DCC0',
+    borderBottomColor: '#e5e7eb',
   },
   modalTitle: {
     fontSize: 20,
@@ -693,7 +704,7 @@ const styles = StyleSheet.create({
   },
   modalClose: {
     fontSize: 20,
-    color: '#A89070',
+    color: '#9ca3af',
     fontFamily: 'Oswald_500Medium',
     padding: 4,
   },
@@ -704,14 +715,14 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 13,
     fontFamily: 'Oswald_600SemiBold',
-    color: '#6B5540',
+    color: '#4a5568',
     marginBottom: 8,
     marginTop: 16,
   },
   formInput: {
-    backgroundColor: '#FFF9E6',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: '#D4C8A0',
+    borderColor: '#d1d5db',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -732,21 +743,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D4C8A0',
-    backgroundColor: '#FFF9E6',
+    borderColor: '#d1d5db',
+    backgroundColor: '#f9fafb',
     alignItems: 'center',
   },
   typeOptionActive: {
-    borderColor: '#C05800',
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    borderColor: '#3d7b5f',
+    backgroundColor: 'rgba(61,123,95,0.1)',
   },
   typeOptionText: {
     fontSize: 14,
     fontFamily: 'Oswald_500Medium',
-    color: '#A89070',
+    color: '#9ca3af',
   },
   typeOptionTextActive: {
-    color: '#C05800',
+    color: '#3d7b5f',
     fontFamily: 'Oswald_600SemiBold',
   },
   switchRow: {
@@ -757,7 +768,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   capturedCoords: {
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    backgroundColor: 'rgba(61,123,95,0.1)',
     borderRadius: 10,
     padding: 12,
     marginTop: 8,
@@ -765,7 +776,7 @@ const styles = StyleSheet.create({
   capturedCoordsText: {
     fontSize: 13,
     fontFamily: 'Oswald_500Medium',
-    color: '#C05800',
+    color: '#3d7b5f',
     textAlign: 'center',
   },
   warningText: {

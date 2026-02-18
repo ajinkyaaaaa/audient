@@ -30,7 +30,7 @@ export default function CustomDrawerContent({ user, onLogout, state, navigation 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#C05800', '#8B3E00']}
+        colors={['#2d4a3e', '#1f3830']}
         style={StyleSheet.absoluteFill}
       />
 

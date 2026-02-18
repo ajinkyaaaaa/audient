@@ -49,7 +49,7 @@ export default function RecordingDetailScreen({ token, recordingId }: Props) {
 
   if (!fontsLoaded) return null;
 
-  if (loading) return <View style={styles.container}><View style={styles.centered}><ActivityIndicator size="large" color="#C05800" /></View></View>;
+  if (loading) return <View style={styles.container}><View style={styles.centered}><ActivityIndicator size="large" color="#3d7b5f" /></View></View>;
   if (!recording) return <View style={styles.container}><View style={styles.centered}><Text style={styles.emptyText}>Recording not found</Text></View></View>;
 
   return (
@@ -64,7 +64,7 @@ export default function RecordingDetailScreen({ token, recordingId }: Props) {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
         <View style={styles.infoCard}>
           <View style={styles.iconRow}>
-            <View style={styles.iconCircle}><Ionicons name="mic" size={24} color="#C05800" /></View>
+            <View style={styles.iconCircle}><Ionicons name="mic" size={24} color="#3d7b5f" /></View>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Duration</Text>
@@ -84,17 +84,17 @@ export default function RecordingDetailScreen({ token, recordingId }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDFBD4' },
+  container: { flex: 1, backgroundColor: '#f5f5f0' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 16, fontFamily: 'Oswald_500Medium', color: '#6B5540' },
+  emptyText: { fontSize: 16, fontFamily: 'Oswald_500Medium', color: '#4a5568' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24, paddingHorizontal: 24, paddingBottom: 16 },
-  backButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8DCC0', justifyContent: 'center', alignItems: 'center' },
+  backButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 20, fontFamily: 'Oswald_700Bold', color: '#1a1a1a' },
-  infoCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8DCC0', borderRadius: 16, padding: 20, marginBottom: 24 },
+  infoCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, padding: 20, marginBottom: 24 },
   iconRow: { alignItems: 'center', marginBottom: 16 },
-  iconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(192,88,0,0.1)', justifyContent: 'center', alignItems: 'center' },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#FAF5E4' },
-  infoLabel: { fontSize: 13, fontFamily: 'Oswald_500Medium', color: '#A89070' },
+  iconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(61,123,95,0.1)', justifyContent: 'center', alignItems: 'center' },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f5f5f0' },
+  infoLabel: { fontSize: 13, fontFamily: 'Oswald_500Medium', color: '#9ca3af' },
   infoValue: { fontSize: 14, fontFamily: 'Oswald_600SemiBold', color: '#1a1a1a', flex: 1, textAlign: 'right' },
   deleteButton: { paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(220,38,38,0.3)', backgroundColor: 'rgba(220,38,38,0.08)', alignItems: 'center' },
   deleteButtonText: { fontSize: 15, fontFamily: 'Oswald_500Medium', color: '#DC2626' },

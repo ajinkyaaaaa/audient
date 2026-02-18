@@ -36,7 +36,7 @@ export default function AppNavigator({ user, token, onLogout }: Props) {
             },
             overlayColor: 'transparent',
             sceneContainerStyle: {
-              backgroundColor: '#FDFBD4',
+              backgroundColor: '#f5f5f0',
             },
           }}
           drawerContent={(props) => (

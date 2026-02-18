@@ -132,7 +132,7 @@ export default function EngagementsScreen({ token }: Props) {
       {/* Client List */}
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#C05800" />
+          <ActivityIndicator size="large" color="#3d7b5f" />
         </View>
       ) : clients.length === 0 ? (
         <View style={styles.centered}>
@@ -199,7 +199,7 @@ export default function EngagementsScreen({ token }: Props) {
         onPress={() => { resetForm(); setShowForm(true); }}
         activeOpacity={0.8}
       >
-        <LinearGradient colors={['#C05800', '#A04800']} style={styles.fabGradient}>
+        <LinearGradient colors={['#3d7b5f', '#4a9d7a']} style={styles.fabGradient}>
           <Text style={styles.fabText}>+</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -221,7 +221,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. Acme Corporation"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={formClientName}
                 onChangeText={setFormClientName}
               />
@@ -231,7 +231,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. ACME"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={formClientCode}
                 onChangeText={setFormClientCode}
                 autoCapitalize="characters"
@@ -242,7 +242,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. Technology, Healthcare"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={formIndustry}
                 onChangeText={setFormIndustry}
               />
@@ -252,7 +252,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. 50-200, Enterprise"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={formCompanySize}
                 onChangeText={setFormCompanySize}
               />
@@ -262,7 +262,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. New York, NY"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={formHqLocation}
                 onChangeText={setFormHqLocation}
               />
@@ -272,7 +272,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. San Francisco, CA"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={formOfficeLocation}
                 onChangeText={setFormOfficeLocation}
               />
@@ -282,7 +282,7 @@ export default function EngagementsScreen({ token }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. acme.com"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={formWebsite}
                 onChangeText={setFormWebsite}
                 autoCapitalize="none"
@@ -315,7 +315,7 @@ export default function EngagementsScreen({ token }: Props) {
                 disabled={formSubmitting}
               >
                 <LinearGradient
-                  colors={['#C05800', '#A04800']}
+                  colors={['#3d7b5f', '#4a9d7a']}
                   style={styles.submitButtonGradient}
                 >
                   {formSubmitting ? (
@@ -336,7 +336,7 @@ export default function EngagementsScreen({ token }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDFBD4',
+    backgroundColor: '#f5f5f0',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
@@ -358,13 +358,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: 'Oswald_500Medium',
-    color: '#6B5540',
+    color: '#4a5568',
     marginBottom: 6,
   },
   emptySubtext: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
     textAlign: 'center',
   },
   list: {
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
@@ -411,19 +411,19 @@ const styles = StyleSheet.create({
   clientCode: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
     marginTop: 2,
   },
   cardRight: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FAF5E4',
+    backgroundColor: '#f5f5f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   arrowText: {
-    color: '#A89070',
+    color: '#9ca3af',
     fontSize: 16,
     fontFamily: 'Oswald_600SemiBold',
   },
@@ -437,20 +437,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#FAF5E4',
+    backgroundColor: '#f5f5f0',
   },
   tierTag: {
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    backgroundColor: 'rgba(61,123,95,0.1)',
   },
   metaTagText: {
     fontSize: 11,
     fontFamily: 'Oswald_500Medium',
-    color: '#6B5540',
+    color: '#4a5568',
   },
   tierTagText: {
     fontSize: 11,
     fontFamily: 'Oswald_500Medium',
-    color: '#C05800',
+    color: '#3d7b5f',
   },
   statusTag: {
     paddingHorizontal: 10,
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 12,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
     marginTop: 4,
   },
 
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: '#C05800',
+    shadowColor: '#3d7b5f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8DCC0',
+    borderBottomColor: '#e5e7eb',
   },
   modalTitle: {
     fontSize: 20,
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   },
   modalClose: {
     fontSize: 20,
-    color: '#A89070',
+    color: '#9ca3af',
     fontFamily: 'Oswald_500Medium',
     padding: 4,
   },
@@ -547,14 +547,14 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 13,
     fontFamily: 'Oswald_600SemiBold',
-    color: '#6B5540',
+    color: '#4a5568',
     marginBottom: 8,
     marginTop: 16,
   },
   formInput: {
-    backgroundColor: '#FFF9E6',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: '#D4C8A0',
+    borderColor: '#d1d5db',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -571,21 +571,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D4C8A0',
-    backgroundColor: '#FFF9E6',
+    borderColor: '#d1d5db',
+    backgroundColor: '#f9fafb',
     alignItems: 'center',
   },
   tierOptionActive: {
-    borderColor: '#C05800',
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    borderColor: '#3d7b5f',
+    backgroundColor: 'rgba(61,123,95,0.1)',
   },
   tierOptionText: {
     fontSize: 12,
     fontFamily: 'Oswald_500Medium',
-    color: '#A89070',
+    color: '#9ca3af',
   },
   tierOptionTextActive: {
-    color: '#C05800',
+    color: '#3d7b5f',
     fontFamily: 'Oswald_600SemiBold',
   },
   formErrorText: {

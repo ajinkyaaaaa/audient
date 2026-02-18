@@ -127,7 +127,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#C05800" />
+          <ActivityIndicator size="large" color="#3d7b5f" />
         </View>
       </View>
     );
@@ -256,7 +256,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
           <Text style={styles.sectionTitle}>Visit History</Text>
         </View>
         <View style={styles.visitPlaceholder}>
-          <Ionicons name="calendar-outline" size={28} color="#D4C8A0" style={{ marginBottom: 12 }} />
+          <Ionicons name="calendar-outline" size={28} color="#d1d5db" style={{ marginBottom: 12 }} />
           <Text style={styles.visitPlaceholderTitle}>Coming Soon</Text>
           <Text style={styles.visitPlaceholderText}>
             Visit logs and check-in history will appear here once the feature is enabled.
@@ -280,7 +280,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="Full name"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={shName}
                 onChangeText={setShName}
               />
@@ -289,7 +289,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. VP Engineering"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={shRole}
                 onChangeText={setShRole}
               />
@@ -298,7 +298,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="email@company.com"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={shEmail}
                 onChangeText={setShEmail}
                 keyboardType="email-address"
@@ -309,7 +309,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={styles.formInput}
                 placeholder="+1 555-0100"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={shPhone}
                 onChangeText={setShPhone}
                 keyboardType="phone-pad"
@@ -319,7 +319,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <TextInput
                 style={[styles.formInput, styles.formInputMultiline]}
                 placeholder="Any relevant notes"
-                placeholderTextColor="#A89070"
+                placeholderTextColor="#9ca3af"
                 value={shNotes}
                 onChangeText={setShNotes}
                 multiline
@@ -336,7 +336,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
                 disabled={shSubmitting}
               >
                 <LinearGradient
-                  colors={['#C05800', '#A04800']}
+                  colors={['#3d7b5f', '#4a9d7a']}
                   style={styles.submitButtonGradient}
                 >
                   {shSubmitting ? (
@@ -357,7 +357,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDFBD4',
+    backgroundColor: '#f5f5f0',
   },
   centered: {
     flex: 1,
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: 'Oswald_500Medium',
-    color: '#6B5540',
+    color: '#4a5568',
   },
   header: {
     flexDirection: 'row',
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
   },
   headerTitle: {
     fontSize: 20,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   infoCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -418,12 +418,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#FAF5E4',
+    borderBottomColor: '#f5f5f0',
   },
   infoLabel: {
     fontSize: 13,
     fontFamily: 'Oswald_500Medium',
-    color: '#A89070',
+    color: '#9ca3af',
   },
   infoValue: {
     fontSize: 14,
@@ -457,20 +457,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 10,
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    backgroundColor: 'rgba(61,123,95,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(192,88,0,0.3)',
+    borderColor: 'rgba(61,123,95,0.3)',
   },
   addSmallButtonText: {
     fontSize: 13,
     fontFamily: 'Oswald_600SemiBold',
-    color: '#C05800',
+    color: '#3d7b5f',
   },
   emptySection: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     padding: 24,
     alignItems: 'center',
     marginBottom: 24,
@@ -478,14 +478,14 @@ const styles = StyleSheet.create({
   emptySectionText: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
   },
 
   // Stakeholder Card
   stakeholderCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   stakeholderRole: {
     fontSize: 12,
     fontFamily: 'Oswald_400Regular',
-    color: '#C05800',
+    color: '#3d7b5f',
     marginTop: 2,
   },
   deleteBtn: {
@@ -522,22 +522,22 @@ const styles = StyleSheet.create({
   stakeholderDetail: {
     fontSize: 12,
     fontFamily: 'Oswald_400Regular',
-    color: '#6B5540',
+    color: '#4a5568',
     marginTop: 4,
   },
   stakeholderNotes: {
     fontSize: 12,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
     marginTop: 6,
     fontStyle: 'italic',
   },
 
   // Visit History Placeholder
   visitPlaceholder: {
-    backgroundColor: '#FFF9E6',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
@@ -546,13 +546,13 @@ const styles = StyleSheet.create({
   visitPlaceholderTitle: {
     fontSize: 16,
     fontFamily: 'Oswald_600SemiBold',
-    color: '#A89070',
+    color: '#9ca3af',
     marginBottom: 6,
   },
   visitPlaceholderText: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8DCC0',
+    borderBottomColor: '#e5e7eb',
   },
   modalTitle: {
     fontSize: 20,
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   },
   modalClose: {
     fontSize: 20,
-    color: '#A89070',
+    color: '#9ca3af',
     fontFamily: 'Oswald_500Medium',
     padding: 4,
   },
@@ -597,14 +597,14 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 13,
     fontFamily: 'Oswald_600SemiBold',
-    color: '#6B5540',
+    color: '#4a5568',
     marginBottom: 8,
     marginTop: 16,
   },
   formInput: {
-    backgroundColor: '#FFF9E6',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: '#D4C8A0',
+    borderColor: '#d1d5db',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,

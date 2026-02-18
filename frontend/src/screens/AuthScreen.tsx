@@ -5,58 +5,33 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
+  ScrollView,
   Platform,
   ActivityIndicator,
+  Image,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFonts, Oswald_400Regular, Oswald_500Medium, Oswald_600SemiBold, Oswald_700Bold } from '@expo-google-fonts/oswald';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  useFonts,
+  Oswald_400Regular,
+  Oswald_500Medium,
+  Oswald_600SemiBold,
+  Oswald_700Bold,
+} from '@expo-google-fonts/oswald';
 import { login, register } from '../services/api';
 
-const VIDEO_URL = 'https://assets.mixkit.co/videos/preview/mixkit-abstract-technology-network-connections-27611-large.mp4';
+const HERO_IMAGE = 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80';
 
 type AuthScreenProps = {
   onLogin: (user: { id: number; name: string; email: string }, token: string) => void;
 };
 
-// Web-specific video component
-const VideoBackground = () => {
-  if (Platform.OS === 'web') {
-    return (
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-        }}
-      >
-        <source src={VIDEO_URL} type="video/mp4" />
-      </video>
-    );
-  }
-
-  // For native platforms, use expo-av
-  const { Video, ResizeMode } = require('expo-av');
-  return (
-    <Video
-      style={StyleSheet.absoluteFill}
-      source={{ uri: VIDEO_URL }}
-      resizeMode={ResizeMode.COVER}
-      isLooping
-      shouldPlay
-      isMuted
-    />
-  );
-};
-
 export default function AuthScreen({ onLogin }: AuthScreenProps) {
+  const { width } = useWindowDimensions();
+  const showImagePanel = width >= 768;
+
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -117,8 +92,9 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
     }
   };
 
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
+  const switchMode = (toLogin: boolean) => {
+    if (toLogin === isLogin) return;
+    setIsLogin(toLogin);
     setEmail('');
     setPassword('');
     setName('');
@@ -127,153 +103,177 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
     setSuccess('');
   };
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  if (!fontsLoaded) return null;
 
   return (
     <View style={styles.container}>
-      {/* Video Background */}
-      <VideoBackground />
-
-      {/* Dark Overlay */}
-      <LinearGradient
-        colors={['rgba(0,0,0,0.35)', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.7)']}
-        style={styles.overlay}
-      />
-
-      {/* Header with Register/Login Toggle */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft} />
-        <TouchableOpacity style={styles.headerButton} onPress={toggleMode}>
-          <Text style={styles.headerButtonText}>
-            {isLogin ? 'Register' : 'Login'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Main Content */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.content}
+      {/* Left Panel — Form */}
+      <ScrollView
+        style={styles.leftPanel}
+        contentContainerStyle={styles.leftContent}
       >
-        <View style={styles.formContainer}>
-          {/* Logo */}
-          <Text style={styles.logo}>Audient</Text>
-          <Text style={styles.subtitle}>
-            {isLogin ? 'Welcome back' : 'Create your account'}
-          </Text>
-
-          {/* Card wrapper for form */}
-          <View style={styles.formCard}>
-            {/* Success Message */}
-            {success ? (
-              <View style={styles.successContainer}>
-                <Text style={styles.successText}>{success}</Text>
-              </View>
-            ) : null}
-
-            {/* Error Message */}
-            {error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
-            {/* Form */}
-            <View style={styles.form}>
-              {!isLogin && (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Full Name"
-                  placeholderTextColor="#A89070"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                />
-              )}
-
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#A89070"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#A89070"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-
-              {!isLogin && (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Confirm Password"
-                  placeholderTextColor="#A89070"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                />
-              )}
-
-              {isLogin && (
-                <TouchableOpacity style={styles.forgotButton}>
-                  <Text style={styles.forgotText}>Forgot password?</Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                <LinearGradient
-                  colors={['#C05800', '#A04800']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.submitGradient}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.submitText}>
-                      {isLogin ? 'Sign In' : 'Create Account'}
-                    </Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-
-            {/* Social Login */}
-            <View style={styles.socialSection}>
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              <View style={styles.socialButtons}>
-                <TouchableOpacity style={styles.socialButton}>
-                  <Text style={styles.socialIcon}>G</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.socialButton}>
-                  <Text style={styles.socialIcon}>f</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.socialButton}>
-                  <Text style={styles.socialIcon}>{'\u{1D54F}'}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+        {/* Logo */}
+        <View style={styles.logoRow}>
+          <View style={styles.logoIcon}>
+            <Text style={styles.logoIconText}>A</Text>
           </View>
+          <Text style={styles.logoText}>Audient</Text>
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Heading */}
+        <Text style={styles.heading}>
+          {isLogin ? 'Welcome Back!' : 'Get Started!'}
+        </Text>
+        <Text style={styles.subheading}>
+          {isLogin ? 'We Are Happy To See You Again' : 'Create your new account'}
+        </Text>
+
+        {/* Tab Toggle */}
+        <View style={styles.tabRow}>
+          <TouchableOpacity
+            style={[styles.tab, isLogin && styles.tabActive]}
+            onPress={() => switchMode(true)}
+          >
+            <Text style={[styles.tabText, isLogin && styles.tabTextActive]}>Sign In</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, !isLogin && styles.tabActive]}
+            onPress={() => switchMode(false)}
+          >
+            <Text style={[styles.tabText, !isLogin && styles.tabTextActive]}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Messages */}
+        {success ? (
+          <View style={styles.successBox}>
+            <Text style={styles.successText}>{success}</Text>
+          </View>
+        ) : null}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        {/* Form Fields */}
+        {!isLogin && (
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your full name"
+              placeholderTextColor="#9ca3af"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+            <Ionicons name="person-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+          </View>
+        )}
+
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email"
+            placeholderTextColor="#9ca3af"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <Ionicons name="mail-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+        </View>
+
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your password"
+            placeholderTextColor="#9ca3af"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <Ionicons name="eye-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+        </View>
+
+        {!isLogin && (
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm your password"
+              placeholderTextColor="#9ca3af"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+            />
+            <Ionicons name="shield-checkmark-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+          </View>
+        )}
+
+        {/* Remember me + Forgot Password */}
+        {isLogin && (
+          <View style={styles.optionsRow}>
+            <View style={styles.rememberRow}>
+              <View style={styles.checkbox} />
+              <Text style={styles.rememberText}>Remember me</Text>
+            </View>
+            <TouchableOpacity>
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Submit */}
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          <LinearGradient
+            colors={['#3d7b5f', '#4a9d7a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.submitGradient}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitText}>
+                {isLogin ? 'Login' : 'Create Account'}
+              </Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Social Buttons */}
+        <TouchableOpacity style={styles.appleButton}>
+          <Ionicons name="logo-apple" size={20} color="#fff" />
+          <Text style={styles.appleButtonText}>Log in with Apple</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.googleButton}>
+          <Text style={styles.googleIcon}>G</Text>
+          <Text style={styles.googleButtonText}>Log in with Google</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Right Panel — Hero Image (wide screens only) */}
+      {showImagePanel && (
+        <View style={styles.rightPanel}>
+          <Image
+            source={{ uri: HERO_IMAGE }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -281,80 +281,94 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-  },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
-    paddingHorizontal: 24,
-    zIndex: 10,
+    backgroundColor: '#ffffff',
   },
-  headerLeft: {
-    width: 80,
-  },
-  headerButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(192,88,0,0.5)',
-    backgroundColor: 'rgba(192,88,0,0.2)',
-  },
-  headerButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: 'Oswald_500Medium',
-  },
-  content: {
+
+  // Left Panel
+  leftPanel: {
     flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  leftContent: {
+    paddingHorizontal: 48,
+    paddingVertical: 48,
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
+  },
+
+  // Logo
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#3d7b5f',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    zIndex: 2,
+    marginRight: 10,
   },
-  formContainer: {
-    width: '100%',
-    maxWidth: 380,
+  logoIconText: {
+    fontSize: 18,
+    fontFamily: 'Oswald_700Bold',
+    color: '#ffffff',
+  },
+  logoText: {
+    fontSize: 22,
+    fontFamily: 'Oswald_700Bold',
+    color: '#1a1a1a',
+  },
+
+  // Heading
+  heading: {
+    fontSize: 28,
+    fontFamily: 'Oswald_700Bold',
+    color: '#1a1a1a',
+    marginBottom: 6,
+  },
+  subheading: {
+    fontSize: 14,
+    fontFamily: 'Oswald_400Regular',
+    color: '#9ca3af',
+    marginBottom: 28,
+  },
+
+  // Tab Toggle
+  tabRow: {
+    flexDirection: 'row',
+    backgroundColor: '#f5f5f0',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 24,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
   },
-  logo: {
-    fontSize: 56,
-    fontFamily: 'Oswald_700Bold',
-    color: '#fff',
-    letterSpacing: 3,
-    marginBottom: 8,
+  tabActive: {
+    backgroundColor: '#3d7b5f',
   },
-  subtitle: {
-    fontSize: 16,
-    fontFamily: 'Oswald_400Regular',
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 32,
+  tabText: {
+    fontSize: 14,
+    fontFamily: 'Oswald_500Medium',
+    color: '#9ca3af',
   },
-  formCard: {
-    width: '100%',
-    backgroundColor: 'rgba(253,251,212,0.95)',
-    borderRadius: 20,
-    padding: 24,
+  tabTextActive: {
+    color: '#ffffff',
   },
-  successContainer: {
-    width: '100%',
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+
+  // Messages
+  successBox: {
+    backgroundColor: 'rgba(34,197,94,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+    borderColor: 'rgba(34,197,94,0.3)',
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
@@ -365,11 +379,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Oswald_400Regular',
     textAlign: 'center',
   },
-  errorContainer: {
-    width: '100%',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  errorBox: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: 'rgba(239,68,68,0.3)',
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
@@ -380,41 +393,73 @@ const styles = StyleSheet.create({
     fontFamily: 'Oswald_400Regular',
     textAlign: 'center',
   },
-  form: {
-    width: '100%',
+
+  // Inputs
+  inputWrapper: {
+    position: 'relative' as const,
+    marginBottom: 16,
   },
   input: {
     width: '100%',
-    height: 56,
-    backgroundColor: '#FFF9E6',
+    height: 52,
+    backgroundColor: '#f5f5f0',
     borderRadius: 12,
     paddingHorizontal: 20,
-    fontSize: 16,
+    paddingRight: 48,
+    fontSize: 15,
     fontFamily: 'Oswald_400Regular',
     color: '#1a1a1a',
-    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#D4C8A0',
+    borderColor: '#e5e7eb',
   },
-  forgotButton: {
-    alignSelf: 'flex-end',
+  inputIcon: {
+    position: 'absolute' as const,
+    right: 16,
+    top: 17,
+  },
+
+  // Options Row
+  optionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 24,
-    marginTop: -8,
+    marginTop: -4,
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#3d7b5f',
+    backgroundColor: '#3d7b5f',
+    marginRight: 8,
+  },
+  rememberText: {
+    fontSize: 13,
+    fontFamily: 'Oswald_400Regular',
+    color: '#4a5568',
   },
   forgotText: {
-    color: '#6B5540',
-    fontSize: 14,
-    fontFamily: 'Oswald_400Regular',
+    fontSize: 13,
+    fontFamily: 'Oswald_500Medium',
+    color: '#3d7b5f',
   },
+
+  // Submit
   submitButton: {
     width: '100%',
-    marginTop: 8,
+    marginBottom: 24,
   },
-  submitButtonDisabled: {
+  submitDisabled: {
     opacity: 0.7,
   },
   submitGradient: {
-    height: 56,
+    height: 52,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -424,10 +469,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Oswald_600SemiBold',
   },
-  socialSection: {
-    width: '100%',
-    marginTop: 24,
-  },
+
+  // Divider
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -436,32 +479,63 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#D4C8A0',
+    backgroundColor: '#e5e7eb',
   },
   dividerText: {
-    color: '#A89070',
+    color: '#9ca3af',
     fontSize: 14,
     fontFamily: 'Oswald_400Regular',
     marginHorizontal: 16,
   },
-  socialButtons: {
+
+  // Social Buttons
+  appleButton: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: '#FFF9E6',
-    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D4C8A0',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: '#1a1a1a',
+    marginBottom: 12,
+    gap: 10,
   },
-  socialIcon: {
-    fontSize: 20,
+  appleButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontFamily: 'Oswald_500Medium',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 10,
+  },
+  googleIcon: {
+    fontSize: 18,
     fontFamily: 'Oswald_600SemiBold',
+    color: '#4285F4',
+  },
+  googleButtonText: {
     color: '#1a1a1a',
+    fontSize: 15,
+    fontFamily: 'Oswald_500Medium',
+  },
+
+  // Right Panel
+  rightPanel: {
+    flex: 1,
+    overflow: 'hidden',
+    borderTopLeftRadius: 24,
+    borderBottomLeftRadius: 24,
+  },
+  heroImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
 });

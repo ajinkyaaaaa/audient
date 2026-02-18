@@ -34,7 +34,7 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDFBD4',
+    backgroundColor: '#f5f5f0',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
@@ -56,13 +56,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: 'Oswald_500Medium',
-    color: '#6B5540',
+    color: '#4a5568',
     marginBottom: 6,
   },
   emptySubtext: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
     textAlign: 'center',
   },
 });

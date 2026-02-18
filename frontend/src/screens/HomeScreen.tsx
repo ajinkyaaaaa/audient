@@ -161,12 +161,12 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
 
         {/* KPI Cards */}
         {loadingData ? (
-          <ActivityIndicator color="#C05800" style={{ marginTop: 32 }} />
+          <ActivityIndicator color="#3d7b5f" style={{ marginTop: 32 }} />
         ) : (
           <View style={styles.kpiRow}>
             {kpis.map((kpi) => (
               <View key={kpi.label} style={styles.kpiCard}>
-                <LinearGradient colors={['#C05800', '#A04800']} style={StyleSheet.absoluteFill} />
+                <LinearGradient colors={['#3d7b5f', '#4a9d7a']} style={StyleSheet.absoluteFill} />
                 <View style={styles.kpiTop}>
                   <Text style={styles.kpiLabel}>{kpi.label}</Text>
                   <View style={styles.kpiBadge}>
@@ -248,13 +248,13 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
                     activeOpacity={0.7}
                   >
                     <View style={styles.recIcon}>
-                      <Ionicons name="mic" size={14} color="#C05800" />
+                      <Ionicons name="mic" size={14} color="#3d7b5f" />
                     </View>
                     <View style={styles.recMeta}>
                       <Text style={styles.recTitle}>Recording · {fmt(r.duration_seconds || 0)}</Text>
                       <Text style={styles.recDate}>{fmtDate(r.created_at)}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#A89070" />
+                    <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
                   </TouchableOpacity>
                 ))
               )}
@@ -285,7 +285,7 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDFBD4',
+    backgroundColor: '#f5f5f0',
   },
   scroll: { flex: 1 },
   scrollContent: {
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   subGreeting: {
     fontSize: 14,
     fontFamily: 'Oswald_400Regular',
-    color: '#6B5540',
+    color: '#4a5568',
     marginTop: 4,
   },
   headerRight: {
@@ -318,9 +318,9 @@ const styles = StyleSheet.create({
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    backgroundColor: 'rgba(61,123,95,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(192,88,0,0.25)',
+    borderColor: 'rgba(61,123,95,0.25)',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -329,13 +329,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#C05800',
+    backgroundColor: '#3d7b5f',
     marginRight: 8,
   },
   liveText: {
     fontSize: 12,
     fontFamily: 'Oswald_500Medium',
-    color: '#C05800',
+    color: '#3d7b5f',
   },
 
   // KPI Cards
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     padding: 20,
     marginBottom: 16,
   },
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
     textAlign: 'center',
     paddingVertical: 16,
   },
@@ -441,13 +441,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0E8D0',
+    borderBottomColor: '#e5e7eb',
     marginBottom: 4,
   },
   tableHeaderText: {
     fontSize: 11,
     fontFamily: 'Oswald_600SemiBold',
-    color: '#A89070',
+    color: '#9ca3af',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#FAF5E4',
+    borderBottomColor: '#f5f5f0',
   },
   tableCell: {
     fontSize: 13,
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   tableCellLight: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
-    color: '#6B5540',
+    color: '#4a5568',
   },
   healthDot: {
     width: 8,
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   tierPill: {
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    backgroundColor: 'rgba(61,123,95,0.1)',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -484,14 +484,14 @@ const styles = StyleSheet.create({
   tierPillText: {
     fontSize: 10,
     fontFamily: 'Oswald_500Medium',
-    color: '#C05800',
+    color: '#3d7b5f',
   },
 
   // Record Button
   recButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#C05800',
+    backgroundColor: '#3d7b5f',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -512,13 +512,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#FAF5E4',
+    borderBottomColor: '#f5f5f0',
   },
   recIcon: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: 'rgba(192,88,0,0.1)',
+    backgroundColor: 'rgba(61,123,95,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
   recDate: {
     fontSize: 11,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
     marginTop: 2,
   },
 
@@ -545,9 +545,9 @@ const styles = StyleSheet.create({
   locChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9E6',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: '#E8DCC0',
+    borderColor: '#e5e7eb',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-  locBase: { backgroundColor: '#C05800' },
+  locBase: { backgroundColor: '#3d7b5f' },
   locClient: { backgroundColor: '#16A34A' },
   locName: {
     fontSize: 13,
@@ -568,6 +568,6 @@ const styles = StyleSheet.create({
   locType: {
     fontSize: 10,
     fontFamily: 'Oswald_400Regular',
-    color: '#A89070',
+    color: '#9ca3af',
   },
 });
