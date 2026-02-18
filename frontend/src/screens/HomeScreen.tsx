@@ -7,6 +7,8 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -60,6 +62,19 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
+
+  // Active badge pulse animation
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.3, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -153,8 +168,8 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
           </View>
           <View style={styles.headerRight}>
             <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>Live Dashboard</Text>
+              <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
+              <Text style={styles.liveText}>Active</Text>
             </View>
           </View>
         </View>

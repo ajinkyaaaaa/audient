@@ -41,7 +41,8 @@
         {
           "locationWhenInUsePermission": "Audient uses your location to show your position on the Geo-Sense map."
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

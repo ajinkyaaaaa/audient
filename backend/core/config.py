@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = ""
     DB_NAME: str = "audient"
     JWT_SECRET: str = "secret"
+    ADMIN_SECRET_KEY: str = ""
     PORT: int = 3001
 
     class Config:

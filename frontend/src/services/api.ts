@@ -34,17 +34,39 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
-export async function register(name: string, email: string, password: string): Promise<AuthResponse> {
+export async function register(
+  name: string,
+  email: string,
+  password: string,
+  role: 'admin' | 'employee' = 'employee',
+  adminSecret?: string,
+  organizationName?: string,
+): Promise<AuthResponse> {
+  const body: Record<string, unknown> = { name, email, password, role };
+  if (role === 'admin') {
+    body.admin_secret = adminSecret;
+    body.organization_name = organizationName;
+  }
   return request<AuthResponse>('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify(body),
   });
 }
 
-export async function login(email: string, password: string): Promise<AuthResponse> {
+export async function login(
+  email: string,
+  password: string,
+  latitude?: number,
+  longitude?: number
+): Promise<AuthResponse> {
+  const body: Record<string, unknown> = { email, password };
+  if (latitude !== undefined && longitude !== undefined) {
+    body.latitude = latitude;
+    body.longitude = longitude;
+  }
   return request<AuthResponse>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -254,6 +276,42 @@ export async function deleteRecording(
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/recordings/${recordingId}`, {
     method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// Sentry (Admin)
+
+export type Employee = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  login_count: number;
+  created_at: string | null;
+  last_login_at: string | null;
+  last_latitude: number | null;
+  last_longitude: number | null;
+};
+
+export type AttendanceRecord = {
+  id: number;
+  login_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+export async function getSentryEmployees(token: string): Promise<{ employees: Employee[] }> {
+  return request<{ employees: Employee[] }>('/sentry/employees', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function getEmployeeAttendance(
+  token: string,
+  employeeId: number
+): Promise<{ attendance: AttendanceRecord[] }> {
+  return request<{ attendance: AttendanceRecord[] }>(`/sentry/employees/${employeeId}/attendance`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

@@ -14,19 +14,36 @@ async def init_db():
         database=settings.DB_NAME,
     )
     async with pool.acquire() as conn:
+        # Organizations table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS organizations (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
+                role VARCHAR(20) DEFAULT 'employee' CHECK (role IN ('admin', 'employee')),
+                organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
                 created_at TIMESTAMP DEFAULT NOW(),
                 login_count INTEGER DEFAULT 0
             );
         """)
-        # Add login_count column if table already exists without it
+        # Migrate existing tables
         await conn.execute("""
             ALTER TABLE users ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0;
+        """)
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'employee';
+        """)
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL;
         """)
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS location_profiles (
@@ -78,6 +95,16 @@ async def init_db():
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 transcript TEXT,
                 duration_seconds INTEGER,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS attendance (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                login_at TIMESTAMP DEFAULT NOW(),
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION,
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)

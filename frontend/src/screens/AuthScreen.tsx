@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Platform,
   ActivityIndicator,
   Image,
   useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
+import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import {
   useFonts,
@@ -37,9 +38,16 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminSecret, setAdminSecret] = useState('');
+  const [orgName, setOrgName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Location coordinates captured during sign-in flow
+  const locationCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
 
   const [fontsLoaded] = useFonts({
     Oswald_400Regular,
@@ -70,19 +78,83 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
         setError('Password must be at least 6 characters');
         return;
       }
+      if (isAdmin) {
+        if (!adminSecret) {
+          setError('Admin secret key is required');
+          return;
+        }
+        if (!orgName) {
+          setError('Organization name is required for admin accounts');
+          return;
+        }
+      }
     }
 
     setLoading(true);
     try {
       if (isLogin) {
-        const res = await login(email, password);
+        // Request location permission when the user clicks Sign In
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted') {
+            setError('Location permission is required to sign in');
+            setLoading(false);
+            return;
+          }
+          // Try instant cached position first, fall back to fresh fetch
+          const lastKnown = await Location.getLastKnownPositionAsync();
+          if (lastKnown) {
+            locationCoordsRef.current = {
+              latitude: lastKnown.coords.latitude,
+              longitude: lastKnown.coords.longitude,
+            };
+          } else {
+            const pos = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Low,
+            });
+            locationCoordsRef.current = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            };
+          }
+        } catch {
+          setError('Location permission is required to sign in');
+          setLoading(false);
+          return;
+        }
+
+        const coords = locationCoordsRef.current;
+        const res = await login(
+          email,
+          password,
+          coords?.latitude,
+          coords?.longitude,
+        );
+        // Persist session for "Remember me" (work hours only: 9:30 AM – 6:00 PM)
+        if (rememberMe) {
+          try {
+            await SecureStore.setItemAsync('audient_session', JSON.stringify({ user: res.user, token: res.token }));
+          } catch {}
+        } else {
+          try { await SecureStore.deleteItemAsync('audient_session'); } catch {}
+        }
         onLogin(res.user, res.token);
       } else {
-        await register(name, email, password);
+        await register(
+          name,
+          email,
+          password,
+          isAdmin ? 'admin' : 'employee',
+          isAdmin ? adminSecret : undefined,
+          isAdmin ? orgName : undefined,
+        );
         setIsLogin(true);
         setName('');
         setPassword('');
         setConfirmPassword('');
+        setIsAdmin(false);
+        setAdminSecret('');
+        setOrgName('');
         setSuccess('Account created successfully! Please sign in.');
       }
     } catch (err: any) {
@@ -99,6 +171,9 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
     setPassword('');
     setName('');
     setConfirmPassword('');
+    setIsAdmin(false);
+    setAdminSecret('');
+    setOrgName('');
     setError('');
     setSuccess('');
   };
@@ -152,6 +227,9 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
         ) : null}
         {error ? (
           <View style={styles.errorBox}>
+            {error.includes('Location') && (
+              <Ionicons name="compass-outline" size={20} color="#ef4444" style={{ marginBottom: 4, alignSelf: 'center' }} />
+            )}
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
@@ -210,13 +288,58 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
           </View>
         )}
 
+        {/* Admin Toggle (Sign Up only) */}
+        {!isLogin && (
+          <TouchableOpacity
+            style={styles.adminToggleRow}
+            onPress={() => setIsAdmin(!isAdmin)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, isAdmin && styles.checkboxCheckedAdmin]}>
+              {isAdmin && <Ionicons name="checkmark" size={14} color="#fff" />}
+            </View>
+            <Text style={styles.adminToggleText}>Register as Admin</Text>
+            <Ionicons name="shield" size={16} color={isAdmin ? '#C05800' : '#9ca3af'} style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+        )}
+
+        {/* Admin fields */}
+        {!isLogin && isAdmin && (
+          <>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Organization name"
+                placeholderTextColor="#9ca3af"
+                value={orgName}
+                onChangeText={setOrgName}
+                autoCapitalize="words"
+              />
+              <Ionicons name="business-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+            </View>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Admin secret key"
+                placeholderTextColor="#9ca3af"
+                value={adminSecret}
+                onChangeText={setAdminSecret}
+                secureTextEntry
+              />
+              <Ionicons name="key-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+            </View>
+          </>
+        )}
+
         {/* Remember me + Forgot Password */}
         {isLogin && (
           <View style={styles.optionsRow}>
-            <View style={styles.rememberRow}>
-              <View style={styles.checkbox} />
+            <TouchableOpacity style={styles.rememberRow} onPress={() => setRememberMe(!rememberMe)} activeOpacity={0.7}>
+              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                {rememberMe && <Ionicons name="checkmark" size={14} color="#fff" />}
+              </View>
               <Text style={styles.rememberText}>Remember me</Text>
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity>
               <Text style={styles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
@@ -436,8 +559,28 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 2,
     borderColor: '#3d7b5f',
-    backgroundColor: '#3d7b5f',
+    backgroundColor: 'transparent',
     marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#3d7b5f',
+  },
+  checkboxCheckedAdmin: {
+    backgroundColor: '#C05800',
+    borderColor: '#C05800',
+  },
+  adminToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: -4,
+  },
+  adminToggleText: {
+    fontSize: 13,
+    fontFamily: 'Oswald_500Medium',
+    color: '#4a5568',
   },
   rememberText: {
     fontSize: 13,

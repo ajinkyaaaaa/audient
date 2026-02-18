@@ -8,15 +8,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 type Props = DrawerContentComponentProps & {
-  user: { name: string; email: string };
+  user: { name: string; email: string; role?: string };
   onLogout: () => void;
 };
 
-const menuItems = [
+const baseMenuItems = [
   { label: 'Home', route: 'Home', icon: 'home' as const },
   { label: 'Geo-Sense', route: 'Geo-Sense', icon: 'location' as const },
   { label: 'Engagements', route: 'Engagements', icon: 'briefcase' as const },
   { label: 'Tasks', route: 'Tasks', icon: 'checkbox' as const },
+];
+
+const adminMenuItems = [
+  { label: 'Sentry', route: 'Sentry', icon: 'eye' as const },
 ];
 
 export default function CustomDrawerContent({ user, onLogout, state, navigation }: Props) {
@@ -43,7 +47,7 @@ export default function CustomDrawerContent({ user, onLogout, state, navigation 
 
       {/* Nav Items */}
       <View style={styles.navSection}>
-        {menuItems.map((item) => {
+        {[...baseMenuItems, ...(user.role === 'admin' ? adminMenuItems : [])].map((item) => {
           const isActive = state.routes[state.index]?.name === item.route;
           return (
             <TouchableOpacity
