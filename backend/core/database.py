@@ -108,6 +108,20 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
+        # Migrate: org config columns
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS login_time TIME DEFAULT '09:00';
+        """)
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS logoff_time TIME DEFAULT '18:00';
+        """)
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS timezone VARCHAR(100) DEFAULT 'Asia/Kolkata';
+        """)
+        # Migrate: attendance period column
+        await conn.execute("""
+            ALTER TABLE attendance ADD COLUMN IF NOT EXISTS period VARCHAR(20);
+        """)
     print("Database initialized — tables ready")
 
 

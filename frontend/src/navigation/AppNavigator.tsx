@@ -8,6 +8,8 @@ import HomeNavigator from './HomeNavigator';
 import EngagementsNavigator from './EngagementsNavigator';
 import TasksScreen from '../screens/TasksScreen';
 import SentryScreen from '../screens/SentryScreen';
+import ConfigScreen from '../screens/ConfigScreen';
+import { OrgConfig } from '../services/api';
 
 type User = {
   id: number;
@@ -22,11 +24,12 @@ type Props = {
   user: User;
   token: string;
   onLogout: () => void;
+  orgConfig: OrgConfig;
 };
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
-export default function AppNavigator({ user, token, onLogout }: Props) {
+export default function AppNavigator({ user, token, onLogout, orgConfig }: Props) {
   return (
     <NavigationContainer>
       <Drawer.Navigator
@@ -59,6 +62,11 @@ export default function AppNavigator({ user, token, onLogout }: Props) {
           {user.role === 'admin' && (
             <Drawer.Screen name="Sentry">
               {() => <SentryScreen token={token} currentUserId={user.id} />}
+            </Drawer.Screen>
+          )}
+          {user.role === 'admin' && (
+            <Drawer.Screen name="Config">
+              {() => <ConfigScreen token={token} />}
             </Drawer.Screen>
           )}
         </Drawer.Navigator>

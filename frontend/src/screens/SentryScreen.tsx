@@ -160,15 +160,11 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const isRecentLogin = (iso: string | null) => {
-    if (!iso) return false;
-    const diffMs = Date.now() - new Date(iso).getTime();
-    return diffMs < 12 * 60 * 60 * 1000;
-  };
-
   if (!fontsLoaded) return null;
 
-  const onlineCount = employees.filter(e => isRecentLogin(e.last_login_at)).length;
+  const activeCount = employees.filter(e => e.status === 'Active').length;
+  const awayCount = employees.filter(e => e.status === 'Away').length;
+  const offlineCount = employees.filter(e => e.status === 'Offline').length;
   const calDays = getCalendarDays(calYear, calMonth);
   const todayStr = toDateStr(today);
 
@@ -197,7 +193,7 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
           </View>
           <View style={styles.onlineBadge}>
             <Animated.View style={[styles.onlineDot, { opacity: pulseAnim }]} />
-            <Text style={styles.onlineText}>{onlineCount} Active Today</Text>
+            <Text style={styles.onlineText}>{activeCount} Active</Text>
           </View>
         </View>
 
@@ -254,19 +250,19 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
               </View>
               <View style={styles.statPairDivider} />
               <View style={styles.statPairItem}>
-                <Text style={[styles.statPairValue, { color: '#16A34A' }]}>{onlineCount}</Text>
+                <Text style={[styles.statPairValue, { color: '#16A34A' }]}>{activeCount}</Text>
                 <Text style={styles.statPairLabel}>Active</Text>
               </View>
             </View>
             <View style={styles.statPairCard}>
               <View style={styles.statPairItem}>
-                <Text style={[styles.statPairValue, { color: '#9ca3af' }]}>{employees.length - onlineCount}</Text>
-                <Text style={styles.statPairLabel}>Offline</Text>
+                <Text style={[styles.statPairValue, { color: '#D97706' }]}>{awayCount}</Text>
+                <Text style={styles.statPairLabel}>Away</Text>
               </View>
               <View style={styles.statPairDivider} />
               <View style={styles.statPairItem}>
-                <Text style={[styles.statPairValue, { color: '#C05800' }]}>{dateRecords.length}</Text>
-                <Text style={styles.statPairLabel}>Today</Text>
+                <Text style={[styles.statPairValue, { color: '#9ca3af' }]}>{offlineCount}</Text>
+                <Text style={styles.statPairLabel}>Offline</Text>
               </View>
             </View>
           </View>
@@ -315,7 +311,16 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
                       <Text style={styles.empEmail} numberOfLines={1}>{rec.email}</Text>
                     </View>
                   </View>
-                  <Text style={[styles.cellText, { flex: 1 }]}>{fmtTime(rec.login_at)}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cellText}>{fmtTime(rec.login_at)}</Text>
+                    {rec.period && (
+                      <View style={[styles.periodBadge, rec.period === 'Morning' ? styles.periodMorning : styles.periodEvening]}>
+                        <Text style={[styles.periodBadgeText, rec.period === 'Morning' ? styles.periodMorningText : styles.periodEveningText]}>
+                          {rec.period}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <View style={{ flex: 1, alignItems: 'flex-end' }}>
                     {rec.latitude && rec.longitude ? (
                       <View style={styles.gpsBadge}>
@@ -355,7 +360,6 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
             </View>
 
             {employees.map((emp) => {
-              const active = isRecentLogin(emp.last_login_at);
               const isYou = emp.id === currentUserId;
               const initials = emp.name
                 .split(' ')
@@ -363,6 +367,9 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
                 .join('')
                 .toUpperCase()
                 .slice(0, 2);
+
+              const statusColor = emp.status === 'Active' ? '#16A34A' : emp.status === 'Away' ? '#D97706' : '#9ca3af';
+              const statusBg = emp.status === 'Active' ? styles.statusActive : emp.status === 'Away' ? styles.statusAway : styles.statusInactive;
 
               return (
                 <View key={emp.id} style={styles.row}>
@@ -389,10 +396,10 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
                   </View>
                   <Text style={[styles.cellText, { flex: 1.5 }]}>{fmtDate(emp.last_login_at)}</Text>
                   <View style={{ flex: 1 }}>
-                    <View style={[styles.statusPill, active ? styles.statusActive : styles.statusInactive]}>
-                      <View style={[styles.statusDot, { backgroundColor: active ? '#16A34A' : '#9ca3af' }]} />
-                      <Text style={[styles.statusText, { color: active ? '#16A34A' : '#9ca3af' }]}>
-                        {active ? 'Active' : 'Offline'}
+                    <View style={[styles.statusPill, statusBg]}>
+                      <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                      <Text style={[styles.statusText, { color: statusColor }]}>
+                        {emp.status}
                       </Text>
                     </View>
                   </View>
@@ -755,6 +762,9 @@ const styles = StyleSheet.create({
   statusActive: {
     backgroundColor: 'rgba(22,163,74,0.08)',
   },
+  statusAway: {
+    backgroundColor: 'rgba(217,119,6,0.08)',
+  },
   statusInactive: {
     backgroundColor: 'rgba(156,163,175,0.08)',
   },
@@ -766,5 +776,31 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontFamily: 'Oswald_500Medium',
+  },
+
+  // Period badge
+  periodBadge: {
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    alignSelf: 'flex-start',
+    marginTop: 3,
+  },
+  periodMorning: {
+    backgroundColor: 'rgba(217,119,6,0.1)',
+  },
+  periodEvening: {
+    backgroundColor: 'rgba(124,58,237,0.1)',
+  },
+  periodBadgeText: {
+    fontSize: 9,
+    fontFamily: 'Oswald_600SemiBold',
+    textTransform: 'uppercase',
+  },
+  periodMorningText: {
+    color: '#D97706',
+  },
+  periodEveningText: {
+    color: '#7C3AED',
   },
 });

@@ -1,3 +1,6 @@
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -122,20 +125,55 @@ async def login(request: Request):
     user = _user_dict(updated)
     token = create_access_token(user["id"], user["email"])
 
-    # Record attendance with optional GPS coordinates
+    # Fetch org config for period computation
+    org_config = {"login_time": "09:00", "logoff_time": "18:00", "timezone": "Asia/Kolkata"}
+    if row["organization_id"]:
+        org = await pool.fetchrow(
+            "SELECT login_time, logoff_time, timezone FROM organizations WHERE id = $1",
+            row["organization_id"],
+        )
+        if org:
+            org_config = {
+                "login_time": org["login_time"].strftime("%H:%M") if org["login_time"] else "09:00",
+                "logoff_time": org["logoff_time"].strftime("%H:%M") if org["logoff_time"] else "18:00",
+                "timezone": org["timezone"] or "Asia/Kolkata",
+            }
+
+    # Compute period based on current time in org timezone
+    tz = ZoneInfo(org_config["timezone"])
+    now_local = datetime.now(tz)
+    login_h, login_m = map(int, org_config["login_time"].split(":"))
+    logoff_h, logoff_m = map(int, org_config["logoff_time"].split(":"))
+    login_time_obj = time(login_h, login_m)
+    logoff_time_obj = time(logoff_h, logoff_m)
+    current_time = now_local.time()
+
+    period = None
+    if current_time < login_time_obj:
+        period = "Morning"
+    elif current_time > logoff_time_obj:
+        period = "Evening"
+
+    # Record attendance with optional GPS coordinates and period
     latitude = body.get("latitude")
     longitude = body.get("longitude")
     try:
         await pool.execute(
-            "INSERT INTO attendance (user_id, latitude, longitude) VALUES ($1, $2, $3)",
+            "INSERT INTO attendance (user_id, latitude, longitude, period) VALUES ($1, $2, $3, $4)",
             row["id"],
             latitude,
             longitude,
+            period,
         )
     except Exception:
         pass  # Don't fail login if attendance insert fails
 
-    return JSONResponse(status_code=200, content={"user": user, "token": token})
+    return JSONResponse(status_code=200, content={
+        "user": user,
+        "token": token,
+        "org_config": org_config,
+        "period": period,
+    })
 
 
 @router.get("/me")

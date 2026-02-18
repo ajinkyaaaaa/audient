@@ -7,9 +7,17 @@ type User = {
   created_at: string;
 };
 
+export type OrgConfig = {
+  login_time: string;
+  logoff_time: string;
+  timezone: string;
+};
+
 type AuthResponse = {
   user: User;
   token: string;
+  org_config?: OrgConfig;
+  period?: string | null;
 };
 
 type ErrorResponse = {
@@ -292,6 +300,7 @@ export type Employee = {
   last_login_at: string | null;
   last_latitude: number | null;
   last_longitude: number | null;
+  status: 'Active' | 'Away' | 'Offline';
 };
 
 export type AttendanceRecord = {
@@ -325,6 +334,7 @@ export type DateAttendanceRecord = {
   login_at: string | null;
   latitude: number | null;
   longitude: number | null;
+  period: string | null;
 };
 
 export async function getAttendanceByDate(
@@ -345,4 +355,23 @@ export async function getMonthSummary(
     `/sentry/attendance/month-summary?year=${year}&month=${month}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
+}
+
+// Org Config
+
+export async function getOrgConfig(token: string): Promise<{ config: OrgConfig }> {
+  return request<{ config: OrgConfig }>('/config', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function updateOrgConfig(
+  token: string,
+  data: Partial<OrgConfig>,
+): Promise<{ config: OrgConfig }> {
+  return request<{ config: OrgConfig }>('/config', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
 }

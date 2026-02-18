@@ -4,6 +4,7 @@ export type DrawerParamList = {
   Engagements: undefined;
   Tasks: undefined;
   Sentry: undefined;
+  Config: undefined;
 };
 
 export type HomeStackParamList = {

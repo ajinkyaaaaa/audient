@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
@@ -40,6 +41,46 @@ async def _verify_admin(request: Request):
     return None, admin, org_id
 
 
+async def _get_org_config(org_id: int) -> dict:
+    """Fetch org config or return defaults."""
+    pool = get_pool()
+    org = await pool.fetchrow(
+        "SELECT login_time, logoff_time, timezone FROM organizations WHERE id = $1", org_id
+    )
+    if not org:
+        return {"login_time": "09:00", "logoff_time": "18:00", "timezone": "Asia/Kolkata"}
+    return {
+        "login_time": org["login_time"].strftime("%H:%M") if org["login_time"] else "09:00",
+        "logoff_time": org["logoff_time"].strftime("%H:%M") if org["logoff_time"] else "18:00",
+        "timezone": org["timezone"] or "Asia/Kolkata",
+    }
+
+
+def _compute_status(last_login_at, org_config: dict) -> str:
+    """Compute employee status: Active, Away, or Offline."""
+    if not last_login_at:
+        return "Offline"
+
+    tz = ZoneInfo(org_config["timezone"])
+    now_local = datetime.now(tz)
+    login_local = last_login_at.astimezone(tz) if last_login_at.tzinfo else last_login_at.replace(tzinfo=tz)
+
+    # Check if logged in today
+    if login_local.date() != now_local.date():
+        return "Offline"
+
+    # Logged in today — check if within work hours
+    login_h, login_m = map(int, org_config["login_time"].split(":"))
+    logoff_h, logoff_m = map(int, org_config["logoff_time"].split(":"))
+    login_time_obj = time(login_h, login_m)
+    logoff_time_obj = time(logoff_h, logoff_m)
+    current_time = now_local.time()
+
+    if login_time_obj <= current_time <= logoff_time_obj:
+        return "Active"
+    return "Away"
+
+
 @router.get("/employees")
 async def get_employees(request: Request):
     """Admin-only: list employees in the same organization with their latest attendance."""
@@ -48,6 +89,7 @@ async def get_employees(request: Request):
         return err
 
     pool = get_pool()
+    org_config = await _get_org_config(org_id)
 
     employees = await pool.fetch(
         """
@@ -69,6 +111,7 @@ async def get_employees(request: Request):
 
     result = []
     for emp in employees:
+        status = _compute_status(emp["last_login_at"], org_config)
         result.append({
             "id": emp["id"],
             "name": emp["name"],
@@ -79,6 +122,7 @@ async def get_employees(request: Request):
             "last_login_at": emp["last_login_at"].isoformat() if emp["last_login_at"] else None,
             "last_latitude": emp["last_latitude"],
             "last_longitude": emp["last_longitude"],
+            "status": status,
         })
 
     return JSONResponse(status_code=200, content={"employees": result})
@@ -99,7 +143,7 @@ async def get_attendance_by_date(
     rows = await pool.fetch(
         """
         SELECT a.id, a.user_id, u.name, u.email, u.role,
-               a.login_at, a.latitude, a.longitude
+               a.login_at, a.latitude, a.longitude, a.period
         FROM attendance a
         JOIN users u ON u.id = a.user_id
         WHERE u.organization_id = $1
@@ -120,6 +164,7 @@ async def get_attendance_by_date(
             "login_at": r["login_at"].isoformat() if r["login_at"] else None,
             "latitude": r["latitude"],
             "longitude": r["longitude"],
+            "period": r["period"],
         }
         for r in rows
     ]

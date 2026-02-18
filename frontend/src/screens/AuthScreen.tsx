@@ -21,15 +21,33 @@ import {
   Oswald_600SemiBold,
   Oswald_700Bold,
 } from '@expo-google-fonts/oswald';
-import { login, register } from '../services/api';
+import { login, register, OrgConfig } from '../services/api';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80';
 
 type AuthScreenProps = {
-  onLogin: (user: { id: number; name: string; email: string }, token: string) => void;
+  onLogin: (
+    user: { id: number; name: string; email: string },
+    token: string,
+    orgConfig?: OrgConfig,
+    period?: string | null,
+  ) => void;
+  orgConfig: OrgConfig;
 };
 
-export default function AuthScreen({ onLogin }: AuthScreenProps) {
+function shouldRequestGPS(config: OrgConfig): boolean {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const time = hours * 60 + minutes;
+  const [startH, startM] = config.login_time.split(':').map(Number);
+  const [endH, endM] = config.logoff_time.split(':').map(Number);
+  const start = startH * 60 + startM;
+  const end = endH * 60 + endM;
+  return time >= start && time <= end;
+}
+
+export default function AuthScreen({ onLogin, orgConfig }: AuthScreenProps) {
   const { width } = useWindowDimensions();
   const showImagePanel = width >= 768;
 
@@ -93,34 +111,35 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
     setLoading(true);
     try {
       if (isLogin) {
-        // Request location permission when the user clicks Sign In
-        try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== 'granted') {
-            setError('Location permission is required to sign in');
+        // Only request GPS during work hours
+        if (shouldRequestGPS(orgConfig)) {
+          try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+              setError('Location permission is required to sign in during work hours');
+              setLoading(false);
+              return;
+            }
+            const lastKnown = await Location.getLastKnownPositionAsync();
+            if (lastKnown) {
+              locationCoordsRef.current = {
+                latitude: lastKnown.coords.latitude,
+                longitude: lastKnown.coords.longitude,
+              };
+            } else {
+              const pos = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Low,
+              });
+              locationCoordsRef.current = {
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+              };
+            }
+          } catch {
+            setError('Location permission is required to sign in during work hours');
             setLoading(false);
             return;
           }
-          // Try instant cached position first, fall back to fresh fetch
-          const lastKnown = await Location.getLastKnownPositionAsync();
-          if (lastKnown) {
-            locationCoordsRef.current = {
-              latitude: lastKnown.coords.latitude,
-              longitude: lastKnown.coords.longitude,
-            };
-          } else {
-            const pos = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.Low,
-            });
-            locationCoordsRef.current = {
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-            };
-          }
-        } catch {
-          setError('Location permission is required to sign in');
-          setLoading(false);
-          return;
         }
 
         const coords = locationCoordsRef.current;
@@ -130,7 +149,7 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
           coords?.latitude,
           coords?.longitude,
         );
-        // Persist session for "Remember me" (work hours only: 9:30 AM – 6:00 PM)
+        // Persist session for "Remember me"
         if (rememberMe) {
           try {
             await SecureStore.setItemAsync('audient_session', JSON.stringify({ user: res.user, token: res.token }));
@@ -138,7 +157,7 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
         } else {
           try { await SecureStore.deleteItemAsync('audient_session'); } catch {}
         }
-        onLogin(res.user, res.token);
+        onLogin(res.user, res.token, res.org_config, res.period);
       } else {
         await register(
           name,

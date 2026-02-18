@@ -21,6 +21,7 @@ const baseMenuItems = [
 
 const adminMenuItems = [
   { label: 'Sentry', route: 'Sentry', icon: 'eye' as const },
+  { label: 'Config', route: 'Config', icon: 'settings' as const },
 ];
 
 export default function CustomDrawerContent({ user, onLogout, state, navigation }: Props) {
