@@ -58,7 +58,7 @@ export default function AppNavigator({ user, token, onLogout }: Props) {
           <Drawer.Screen name="Tasks" component={TasksScreen} />
           {user.role === 'admin' && (
             <Drawer.Screen name="Sentry">
-              {() => <SentryScreen token={token} />}
+              {() => <SentryScreen token={token} currentUserId={user.id} />}
             </Drawer.Screen>
           )}
         </Drawer.Navigator>

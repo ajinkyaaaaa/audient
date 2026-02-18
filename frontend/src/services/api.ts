@@ -315,3 +315,34 @@ export async function getEmployeeAttendance(
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export type DateAttendanceRecord = {
+  id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  role: string;
+  login_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+export async function getAttendanceByDate(
+  token: string,
+  date: string,
+): Promise<{ records: DateAttendanceRecord[]; date: string }> {
+  return request<{ records: DateAttendanceRecord[]; date: string }>(`/sentry/attendance/by-date?date=${date}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function getMonthSummary(
+  token: string,
+  year: number,
+  month: number,
+): Promise<{ days: Record<string, number>; year: number; month: number }> {
+  return request<{ days: Record<string, number>; year: number; month: number }>(
+    `/sentry/attendance/month-summary?year=${year}&month=${month}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
