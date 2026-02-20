@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.audient.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Audient uses your location to show your position on the Geo-Sense map."
+        "NSLocationWhenInUseUsageDescription": "Audient uses your location to show your position on the Geo-Sense map.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -28,7 +29,9 @@
       "package": "com.audient.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -43,6 +46,11 @@
         }
       ],
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fe39d43a-9c2c-4554-860c-c775a982c55c"
+      }
+    }
   }
 }

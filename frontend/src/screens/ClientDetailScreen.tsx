@@ -210,6 +210,12 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
               <Text style={styles.infoValue}>{client.website_domain}</Text>
             </View>
           ) : null}
+          {client.creator_name ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Added by</Text>
+              <Text style={styles.infoValue}>{client.creator_name}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Stakeholders */}

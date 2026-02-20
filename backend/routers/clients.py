@@ -1,3 +1,6 @@
+import os
+
+import openpyxl
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -6,6 +9,30 @@ from core.security import decode_access_token
 
 router = APIRouter(prefix="/api/clients")
 
+# ── Master client list (loaded once at startup) ───────────
+_master_clients: list[dict] = []
+
+
+def _load_master_clients() -> None:
+    xlsx_path = os.path.join(os.path.dirname(__file__), "..", "misc", "master_client_data.xlsx")
+    try:
+        wb = openpyxl.load_workbook(xlsx_path, read_only=True, data_only=True)
+        ws = wb.active
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            code = row[0]
+            name = row[1]
+            if code is not None and name is not None:
+                _master_clients.append({"code": str(code).strip(), "name": str(name).strip()})
+        wb.close()
+        print(f"Loaded {len(_master_clients)} master clients from Excel")
+    except Exception as exc:
+        print(f"Warning: could not load master client data: {exc}")
+
+
+_load_master_clients()
+
+
+# ── Helpers ───────────────────────────────────────────────
 
 def _get_user_id(request: Request) -> int | None:
     auth_header = request.headers.get("authorization", "")
@@ -20,7 +47,7 @@ def _get_user_id(request: Request) -> int | None:
 
 
 def _client_dict(row) -> dict:
-    return {
+    d = {
         "id": row["id"],
         "user_id": row["user_id"],
         "client_name": row["client_name"],
@@ -36,6 +63,12 @@ def _client_dict(row) -> dict:
         "created_at": row["created_at"].isoformat(),
         "updated_at": row["updated_at"].isoformat(),
     }
+    # creator_name is present when the query JOINs users table
+    try:
+        d["creator_name"] = row["creator_name"]
+    except KeyError:
+        d["creator_name"] = None
+    return d
 
 
 def _stakeholder_dict(row) -> dict:
@@ -52,7 +85,17 @@ def _stakeholder_dict(row) -> dict:
     }
 
 
-# ── Clients ──────────────────────────────────────────────
+# ── Master client list endpoint ───────────────────────────
+
+@router.get("/master-list")
+async def get_master_clients(request: Request):
+    user_id = _get_user_id(request)
+    if user_id is None:
+        return JSONResponse(status_code=401, content={"error": "Not authenticated"})
+    return JSONResponse(status_code=200, content={"clients": _master_clients})
+
+
+# ── Clients ───────────────────────────────────────────────
 
 @router.post("")
 async def create_client(request: Request):
@@ -103,14 +146,17 @@ async def create_client(request: Request):
 
 @router.get("")
 async def list_clients(request: Request):
+    """Return all engagements across all users (with creator name)."""
     user_id = _get_user_id(request)
     if user_id is None:
         return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
     pool = get_pool()
     rows = await pool.fetch(
-        "SELECT * FROM clients WHERE user_id = $1 ORDER BY created_at DESC",
-        user_id,
+        """SELECT c.*, u.name AS creator_name
+           FROM clients c
+           JOIN users u ON c.user_id = u.id
+           ORDER BY c.created_at DESC"""
     )
 
     return JSONResponse(
@@ -121,14 +167,18 @@ async def list_clients(request: Request):
 
 @router.get("/{client_id}")
 async def get_client(client_id: int, request: Request):
+    """Return a single client — accessible to any authenticated user."""
     user_id = _get_user_id(request)
     if user_id is None:
         return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
     pool = get_pool()
     row = await pool.fetchrow(
-        "SELECT * FROM clients WHERE id = $1 AND user_id = $2",
-        client_id, user_id,
+        """SELECT c.*, u.name AS creator_name
+           FROM clients c
+           JOIN users u ON c.user_id = u.id
+           WHERE c.id = $1""",
+        client_id,
     )
     if not row:
         return JSONResponse(status_code=404, content={"error": "Client not found"})
@@ -196,7 +246,7 @@ async def delete_client(client_id: int, request: Request):
     return JSONResponse(status_code=200, content={"deleted": True})
 
 
-# ── Stakeholders ─────────────────────────────────────────
+# ── Stakeholders ──────────────────────────────────────────
 
 @router.post("/{client_id}/stakeholders")
 async def create_stakeholder(client_id: int, request: Request):
@@ -234,15 +284,13 @@ async def create_stakeholder(client_id: int, request: Request):
 
 @router.get("/{client_id}/stakeholders")
 async def list_stakeholders(client_id: int, request: Request):
+    """Readable by any authenticated user."""
     user_id = _get_user_id(request)
     if user_id is None:
         return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
     pool = get_pool()
-    client = await pool.fetchrow(
-        "SELECT id FROM clients WHERE id = $1 AND user_id = $2",
-        client_id, user_id,
-    )
+    client = await pool.fetchrow("SELECT id FROM clients WHERE id = $1", client_id)
     if not client:
         return JSONResponse(status_code=404, content={"error": "Client not found"})
 

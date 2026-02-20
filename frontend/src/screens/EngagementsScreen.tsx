@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import {
   Oswald_600SemiBold,
   Oswald_700Bold,
 } from '@expo-google-fonts/oswald';
-import { createClient, getClients, Client } from '../services/api';
+import { createClient, getClients, getMasterClients, Client, MasterClient } from '../services/api';
 import { EngagementsStackParamList } from '../navigation/types';
 
 type Props = {
@@ -49,6 +49,10 @@ export default function EngagementsScreen({ token }: Props) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
+  // Master client list for autocomplete
+  const [masterClients, setMasterClients] = useState<MasterClient[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   // Form state
   const [formClientName, setFormClientName] = useState('');
   const [formClientCode, setFormClientCode] = useState('');
@@ -74,6 +78,30 @@ export default function EngagementsScreen({ token }: Props) {
     loadClients();
   }, [loadClients]);
 
+  // Load master clients once when form first opens
+  useEffect(() => {
+    if (showForm && masterClients.length === 0) {
+      getMasterClients(token)
+        .then((data) => setMasterClients(data.clients))
+        .catch(() => {});
+    }
+  }, [showForm, token]);
+
+  // Filtered suggestions based on current input
+  const suggestions = useMemo(() => {
+    const q = formClientName.trim().toLowerCase();
+    if (!q || q.length < 1) return [];
+    return masterClients
+      .filter((mc) => mc.name.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [formClientName, masterClients]);
+
+  const handleSelectSuggestion = (mc: MasterClient) => {
+    setFormClientName(mc.name);
+    setFormClientCode(mc.code);
+    setShowSuggestions(false);
+  };
+
   const resetForm = () => {
     setFormClientName('');
     setFormClientCode('');
@@ -84,6 +112,7 @@ export default function EngagementsScreen({ token }: Props) {
     setFormWebsite('');
     setFormTier('Normal');
     setFormError('');
+    setShowSuggestions(false);
   };
 
   const handleCreate = async () => {
@@ -188,6 +217,10 @@ export default function EngagementsScreen({ token }: Props) {
               {c.headquarters_location ? (
                 <Text style={styles.locationText}>{c.headquarters_location}</Text>
               ) : null}
+
+              {c.creator_name ? (
+                <Text style={styles.creatorText}>Added by {c.creator_name}</Text>
+              ) : null}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -215,16 +248,42 @@ export default function EngagementsScreen({ token }: Props) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.formScroll} contentContainerStyle={{ paddingBottom: 60 }}>
-              {/* Client Name */}
+            <ScrollView
+              style={styles.formScroll}
+              contentContainerStyle={{ paddingBottom: 60 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Client Name with autocomplete */}
               <Text style={styles.formLabel}>Client Name *</Text>
               <TextInput
                 style={styles.formInput}
-                placeholder="e.g. Acme Corporation"
+                placeholder="Type to search client name…"
                 placeholderTextColor="#9ca3af"
                 value={formClientName}
-                onChangeText={setFormClientName}
+                onChangeText={(text) => {
+                  setFormClientName(text);
+                  setShowSuggestions(true);
+                  // Clear auto-filled code if user edits name manually
+                  if (!masterClients.some((mc) => mc.name === text)) {
+                    setFormClientCode('');
+                  }
+                }}
+                onFocus={() => setShowSuggestions(true)}
               />
+              {showSuggestions && suggestions.length > 0 && (
+                <View style={styles.suggestionList}>
+                  {suggestions.map((mc) => (
+                    <TouchableOpacity
+                      key={mc.code}
+                      style={styles.suggestionItem}
+                      onPress={() => handleSelectSuggestion(mc)}
+                    >
+                      <Text style={styles.suggestionName}>{mc.name}</Text>
+                      <Text style={styles.suggestionCode}>{mc.code}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
               {/* Client Code */}
               <Text style={styles.formLabel}>Client Code *</Text>
@@ -479,6 +538,12 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     marginTop: 4,
   },
+  creatorText: {
+    fontSize: 11,
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
+    marginTop: 6,
+  },
 
   // FAB
   fab: {
@@ -562,6 +627,40 @@ const styles = StyleSheet.create({
     fontFamily: 'Oswald_400Regular',
     color: '#1a1a1a',
   },
+
+  // Autocomplete suggestions
+  suggestionList: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+    marginTop: -1,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  suggestionName: {
+    fontSize: 14,
+    fontFamily: 'Oswald_400Regular',
+    color: '#1a1a1a',
+    flex: 1,
+    marginRight: 8,
+  },
+  suggestionCode: {
+    fontSize: 12,
+    fontFamily: 'Oswald_500Medium',
+    color: '#9ca3af',
+  },
+
   tierSelector: {
     flexDirection: 'row',
     gap: 8,

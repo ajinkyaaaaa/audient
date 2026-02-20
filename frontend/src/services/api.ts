@@ -151,6 +151,12 @@ export type Client = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  creator_name?: string | null;
+};
+
+export type MasterClient = {
+  code: string;
+  name: string;
 };
 
 export type Stakeholder = {
@@ -187,6 +193,12 @@ export async function createClient(
 
 export async function getClients(token: string): Promise<{ clients: Client[] }> {
   return request<{ clients: Client[] }>('/clients', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function getMasterClients(token: string): Promise<{ clients: MasterClient[] }> {
+  return request<{ clients: MasterClient[] }>('/clients/master-list', {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

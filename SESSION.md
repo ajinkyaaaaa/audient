@@ -128,9 +128,43 @@
 
 ---
 
-## Session 4 — Audio Capture & Visit History
+## Session 4 — Engagement Sync & Master Client Autocomplete
+**Date:** 2026-02-19
+
+### Plan
+- Make engagements visible to all users (not just creator)
+- Show creator name on each engagement card and in detail view
+- Load master_client_data.xlsx (1474 rows, LEDGER_CODE + LEDGER_NAME) at backend startup
+- Add `/api/clients/master-list` endpoint serving master list in memory
+- Add searchable autocomplete on Client Name field in New Engagement form
+
+### Result
+- `routers/clients.py` updated:
+  - Loads `misc/master_client_data.xlsx` at module init → 1,405 valid entries in `_master_clients`
+  - `GET /api/clients` now JOINs users table, returns all engagements (no user_id filter) with `creator_name`
+  - `GET /api/clients/:id` now accessible to any authenticated user (no user_id filter on read)
+  - `GET /api/clients/master-list` new endpoint returning full master list
+  - `GET /api/clients/:id/stakeholders` now accessible to any authenticated user
+  - Write ops (POST, PATCH, DELETE) remain scoped to creator (user_id check)
+- `openpyxl` added to requirements.txt and installed in venv
+- `api.ts` updated: added `creator_name?` to `Client` type, added `MasterClient` type, added `getMasterClients()` function
+- `EngagementsScreen.tsx` updated:
+  - Shows "Added by {creator_name}" on each engagement card
+  - Client Name TextInput replaced with searchable autocomplete: type to filter master list, shows up to 8 matches, tap to select auto-fills name + code
+  - `keyboardShouldPersistTaps="handled"` on ScrollView so suggestion taps register
+- `ClientDetailScreen.tsx` updated: shows "Added by {name}" row in info card
+
+### Decisions
+- Master client list loaded into memory at startup (1,405 entries) — fast filtering client-side
+- Filtering is case-insensitive substring match on `name`, limited to 8 suggestions
+- Selecting a suggestion auto-fills `client_code` from `LEDGER_CODE`; user can still type freely if client not in master list
+- Write operations (create/update/delete) remain scoped to the engagement creator
+
+---
+
+## Session 5 — Audio Capture & Visit History
 **Date:** TBD
-**Milestone:** 4
+**Milestone:** 4 (next)
 
 ### Plan
 - Implement **audio recording** functionality on the Home screen — mic permissions, record/stop/playback controls, file storage
