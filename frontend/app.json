@@ -16,7 +16,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.audient.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Audient uses your location to show your position on the Geo-Sense map.",
+        "NSLocationWhenInUseUsageDescription": "Audient uses your location to sync your position to your team.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Audient needs background location access to keep syncing your position throughout the workday, even when the app is in the background.",
+        "NSLocationAlwaysUsageDescription": "Audient needs background location access to keep syncing your position throughout the workday.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -30,8 +32,10 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
       ]
     },
     "web": {
@@ -42,7 +46,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Audient uses your location to show your position on the Geo-Sense map."
+          "locationWhenInUsePermission": "Audient uses your location to sync your position to your team.",
+          "locationAlwaysAndWhenInUsePermission": "Audient needs background location access to keep syncing your position throughout the workday.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
         }
       ],
       "expo-secure-store"

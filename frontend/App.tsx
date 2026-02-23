@@ -1,11 +1,31 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SecureStore from 'expo-secure-store';
+import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 import AuthScreen from './src/screens/AuthScreen';
 import AppNavigator from './src/navigation/AppNavigator';
-import { OrgConfig } from './src/services/api';
+import { OrgConfig, syncLocation } from './src/services/api';
+
+// ── Background location task ─────────────────────────────────────────────────
+// Must be defined at module level, before any component renders.
+const LOCATION_TASK = 'audient-location-sync';
+
+TaskManager.defineTask(LOCATION_TASK, async ({ data, error }: TaskManager.TaskManagerTaskBody) => {
+  if (error) return;
+  const { locations } = data as { locations: Location.LocationObject[] };
+  if (!locations?.length) return;
+  const loc = locations[locations.length - 1];
+  try {
+    const session = await SecureStore.getItemAsync('audient_session');
+    if (!session) return;
+    const { token } = JSON.parse(session);
+    if (!token) return;
+    await syncLocation(token, loc.coords.latitude, loc.coords.longitude);
+  } catch {}
+});
 
 type User = {
   id: number;
@@ -45,6 +65,7 @@ export default function App() {
   const [period, setPeriod] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const forceLogoutRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationPingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Restore saved session if within work hours
   useEffect(() => {
@@ -56,9 +77,10 @@ export default function App() {
         setOrgConfig(cachedConfig);
 
         const saved = await SecureStore.getItemAsync(SESSION_KEY);
-        if (saved && isWithinWorkHours(cachedConfig)) {
-          const { user: savedUser, token: savedToken } = JSON.parse(saved);
-          if (savedUser && savedToken) {
+        if (saved) {
+          const { user: savedUser, token: savedToken, rememberMe: savedRememberMe } = JSON.parse(saved);
+          // Restore session if: remember me was checked (bypass work hours) OR currently within work hours
+          if (savedUser && savedToken && (savedRememberMe || isWithinWorkHours(cachedConfig))) {
             setUser(savedUser);
             setToken(savedToken);
           }
@@ -108,6 +130,74 @@ export default function App() {
       }
     };
   }, [user, token, orgConfig, handleLogout]);
+
+  // Location sync: background task when permission granted, foreground interval as fallback
+  useEffect(() => {
+    if (!user || !token) {
+      // Stop background task and foreground interval on logout
+      Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)
+        .then(started => { if (started) Location.stopLocationUpdatesAsync(LOCATION_TASK); })
+        .catch(() => {});
+      if (locationPingRef.current) {
+        clearInterval(locationPingRef.current);
+        locationPingRef.current = null;
+      }
+      return;
+    }
+
+    const intervalMs = (orgConfig.location_sync_interval ?? 5) * 1000;
+    const tokenSnapshot = token;
+
+    (async () => {
+      const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+      if (fgStatus !== 'granted') return;
+
+      const { status: bgStatus } = Platform.OS !== 'web'
+        ? await Location.requestBackgroundPermissionsAsync()
+        : { status: 'denied' as const };
+
+      if (bgStatus === 'granted' && Platform.OS !== 'web') {
+        // Full background tracking via task manager
+        try {
+          const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK);
+          if (alreadyRunning) await Location.stopLocationUpdatesAsync(LOCATION_TASK);
+          await Location.startLocationUpdatesAsync(LOCATION_TASK, {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: intervalMs,
+            distanceInterval: 0,
+            showsBackgroundLocationIndicator: true,
+            foregroundService: {
+              notificationTitle: 'Audient',
+              notificationBody: 'Location sync is active',
+              notificationColor: '#3d7b5f',
+            },
+          });
+        } catch {}
+      } else {
+        // Fallback: foreground-only interval
+        const ping = async () => {
+          try {
+            const loc = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+            await syncLocation(tokenSnapshot, loc.coords.latitude, loc.coords.longitude);
+          } catch {}
+        };
+        ping();
+        locationPingRef.current = setInterval(ping, intervalMs);
+      }
+    })();
+
+    return () => {
+      Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)
+        .then(started => { if (started) Location.stopLocationUpdatesAsync(LOCATION_TASK); })
+        .catch(() => {});
+      if (locationPingRef.current) {
+        clearInterval(locationPingRef.current);
+        locationPingRef.current = null;
+      }
+    };
+  }, [user, token, orgConfig.location_sync_interval]);
 
   const handleLogin = async (
     userData: User,

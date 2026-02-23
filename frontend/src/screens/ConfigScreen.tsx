@@ -264,6 +264,30 @@ export default function ConfigScreen({ token }: ConfigScreenProps) {
           )}
         </View>
 
+        {/* Location Sync Interval Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="navigate" size={20} color="#C05800" />
+            <Text style={styles.cardTitle}>Location Sync Interval</Text>
+          </View>
+          <Text style={styles.cardDescription}>
+            How often employee devices stream their GPS location to the server (in seconds). Lower values give more accurate live tracking.
+          </Text>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="timer-outline" size={16} color="#C05800" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={String(config.location_sync_interval ?? 5)}
+              onChangeText={(text) => setConfig({ ...config, location_sync_interval: parseInt(text) || 5 })}
+              placeholder="5"
+              placeholderTextColor="#D4C8A0"
+              keyboardType="number-pad"
+              maxLength={3}
+            />
+            <Text style={styles.inputSuffix}>seconds</Text>
+          </View>
+        </View>
+
         {/* Info Card */}
         <View style={[styles.card, styles.infoCard]}>
           <View style={styles.cardHeader}>
@@ -479,6 +503,12 @@ const styles = StyleSheet.create({
   },
   timeSeparator: {
     paddingBottom: 14,
+  },
+  inputSuffix: {
+    fontSize: 13,
+    fontFamily: 'Oswald_500Medium',
+    color: '#A89070',
+    marginLeft: 4,
   },
 
   // Timezone

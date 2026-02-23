@@ -126,6 +126,20 @@ async def init_db():
         await conn.execute("""
             ALTER TABLE organizations ADD COLUMN IF NOT EXISTS join_code VARCHAR(20) UNIQUE;
         """)
+        # Migrate: live location sync columns on users
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS loc_lat DOUBLE PRECISION;
+        """)
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS loc_lng DOUBLE PRECISION;
+        """)
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS loc_synced_at TIMESTAMP;
+        """)
+        # Migrate: org location sync interval (seconds)
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS location_sync_interval INTEGER DEFAULT 5;
+        """)
     print("Database initialized — tables ready")
 
 

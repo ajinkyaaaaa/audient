@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -39,6 +39,7 @@ export default function EmployeeDetailScreen({ token, employeeId, employeeName }
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
 
   const [fontsLoaded] = useFonts({
     Oswald_400Regular,
@@ -69,16 +70,31 @@ export default function EmployeeDetailScreen({ token, employeeId, employeeName }
     loadAttendance();
   }, [loadEmployee, loadAttendance]);
 
-  // Poll employee every 15s for live location updates
+  // Poll employee every 5s for live location updates
   const loadEmployeeRef = useRef(loadEmployee);
   useEffect(() => { loadEmployeeRef.current = loadEmployee; }, [loadEmployee]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       loadEmployeeRef.current();
-    }, 15000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Tick every second so sync age display counts up in real time
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const fmtSyncAge = (iso: string | null) => {
+    if (!iso) return null;
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    const mins = Math.floor(diff / 60);
+    if (mins < 60) return `${mins}m ago`;
+    return `${Math.floor(mins / 60)}h ago`;
+  };
 
   const fmtDate = (iso: string | null) => {
     if (!iso) return 'Never';
@@ -91,6 +107,9 @@ export default function EmployeeDetailScreen({ token, employeeId, employeeName }
     if (diffHours < 24) return `${diffHours}h ago`;
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const syncAge = useMemo(() => fmtSyncAge(employee?.last_sync_at ?? null), [employee?.last_sync_at, tick]);
 
   if (!fontsLoaded) return null;
 
@@ -123,11 +142,12 @@ export default function EmployeeDetailScreen({ token, employeeId, employeeName }
         <View style={styles.mapCard}>
           <View style={styles.mapHeader}>
             <Ionicons name="location" size={16} color="#C05800" />
-            <Text style={styles.mapTitle}>Live Location</Text>
-            {hasLocation && (
+            <Text style={styles.mapTitle}>Location</Text>
+            {syncAge && (
               <View style={styles.liveChip}>
                 <View style={styles.liveDot} />
                 <Text style={styles.liveText}>LIVE</Text>
+                <Text style={styles.syncAgeText}>{syncAge}</Text>
               </View>
             )}
           </View>
@@ -172,8 +192,10 @@ export default function EmployeeDetailScreen({ token, employeeId, employeeName }
             <Text style={styles.infoValue}>{employee?.login_count ?? '—'}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Last Seen</Text>
-            <Text style={styles.infoValue}>{fmtDate(employee?.last_login_at ?? null)}</Text>
+            <Text style={styles.infoLabel}>Last Sync</Text>
+            <Text style={[styles.infoValue, { fontFamily: 'Oswald_600SemiBold' }]}>
+              {syncAge ?? fmtDate(employee?.last_sync_at ?? null)}
+            </Text>
           </View>
           <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
             <Text style={styles.infoLabel}>Member Since</Text>
@@ -298,6 +320,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Oswald_700Bold',
     color: '#16A34A',
     letterSpacing: 0.5,
+  },
+  syncAgeText: {
+    fontSize: 11,
+    fontFamily: 'Oswald_700Bold',
+    color: '#16A34A',
+    marginLeft: 2,
   },
   map: { height: 220 },
   mapPlaceholder: {

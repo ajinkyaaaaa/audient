@@ -155,14 +155,14 @@ export default function AuthScreen({ onLogin, orgConfig }: AuthScreenProps) {
           coords?.latitude,
           coords?.longitude,
         );
-        // Persist session for "Remember me"
-        if (rememberMe) {
-          try {
-            await SecureStore.setItemAsync('audient_session', JSON.stringify({ user: res.user, token: res.token }));
-          } catch {}
-        } else {
-          try { await SecureStore.deleteItemAsync('audient_session'); } catch {}
-        }
+        // Always persist session; include rememberMe flag so App.tsx knows to skip work-hours gate
+        try {
+          await SecureStore.setItemAsync('audient_session', JSON.stringify({
+            user: res.user,
+            token: res.token,
+            rememberMe,
+          }));
+        } catch {}
         onLogin(res.user, res.token, res.org_config, res.period);
       } else {
         await register(

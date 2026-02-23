@@ -33,6 +33,7 @@ export type OrgConfig = {
   timezone: string;
   org_name?: string;
   join_code?: string;
+  location_sync_interval?: number;
 };
 
 type AuthResponse = {
@@ -337,6 +338,7 @@ export type Employee = {
   last_login_at: string | null;
   last_latitude: number | null;
   last_longitude: number | null;
+  last_sync_at: string | null;
   status: 'Active' | 'Away' | 'Offline';
 };
 
@@ -392,6 +394,18 @@ export async function getMonthSummary(
     `/sentry/attendance/month-summary?year=${year}&month=${month}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
+}
+
+export async function syncLocation(
+  token: string,
+  latitude: number,
+  longitude: number,
+): Promise<{ synced: boolean }> {
+  return request<{ synced: boolean }>('/location/sync', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ latitude, longitude }),
+  });
 }
 
 // Org Config

@@ -94,10 +94,11 @@ async def get_employees(request: Request):
     employees = await pool.fetch(
         """
         SELECT u.id, u.name, u.email, u.role, u.login_count, u.created_at,
-               a.login_at AS last_login_at, a.latitude AS last_latitude, a.longitude AS last_longitude
+               u.loc_lat AS last_latitude, u.loc_lng AS last_longitude, u.loc_synced_at,
+               a.login_at AS last_login_at
         FROM users u
         LEFT JOIN LATERAL (
-            SELECT login_at, latitude, longitude
+            SELECT login_at
             FROM attendance
             WHERE user_id = u.id
             ORDER BY login_at DESC
@@ -122,6 +123,7 @@ async def get_employees(request: Request):
             "last_login_at": emp["last_login_at"].isoformat() if emp["last_login_at"] else None,
             "last_latitude": emp["last_latitude"],
             "last_longitude": emp["last_longitude"],
+            "last_sync_at": emp["loc_synced_at"].isoformat() if emp["loc_synced_at"] else None,
             "status": status,
         })
 

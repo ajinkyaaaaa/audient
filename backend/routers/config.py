@@ -14,6 +14,7 @@ DEFAULTS = {
     "login_time": "09:00",
     "logoff_time": "18:00",
     "timezone": "Asia/Kolkata",
+    "location_sync_interval": 5,
 }
 
 
@@ -43,7 +44,7 @@ async def get_config(request: Request):
         return JSONResponse(status_code=200, content={"config": DEFAULTS})
 
     org = await pool.fetchrow(
-        "SELECT name, login_time, logoff_time, timezone, join_code FROM organizations WHERE id = $1",
+        "SELECT name, login_time, logoff_time, timezone, join_code, location_sync_interval FROM organizations WHERE id = $1",
         user["organization_id"],
     )
     if not org:
@@ -56,6 +57,7 @@ async def get_config(request: Request):
             "timezone": org["timezone"] or DEFAULTS["timezone"],
             "org_name": org["name"],
             "join_code": org["join_code"],
+            "location_sync_interval": org["location_sync_interval"] or DEFAULTS["location_sync_interval"],
         }
     })
 
@@ -82,6 +84,7 @@ async def update_config(request: Request):
     login_time_str = body.get("login_time")
     logoff_time_str = body.get("logoff_time")
     timezone_str = body.get("timezone")
+    location_sync_interval = body.get("location_sync_interval")
 
     # Validate timezone
     if timezone_str and timezone_str not in VALID_TIMEZONES:
@@ -116,6 +119,16 @@ async def update_config(request: Request):
         updates.append(f"timezone = ${idx}")
         params.append(timezone_str)
         idx += 1
+    if location_sync_interval is not None:
+        try:
+            interval_int = int(location_sync_interval)
+        except (ValueError, TypeError):
+            return JSONResponse(status_code=400, content={"error": "location_sync_interval must be an integer"})
+        if interval_int < 3 or interval_int > 300:
+            return JSONResponse(status_code=400, content={"error": "location_sync_interval must be between 3 and 300 seconds"})
+        updates.append(f"location_sync_interval = ${idx}")
+        params.append(interval_int)
+        idx += 1
 
     if not updates:
         return JSONResponse(status_code=400, content={"error": "No fields to update"})
@@ -126,7 +139,7 @@ async def update_config(request: Request):
 
     # Fetch updated config
     org = await pool.fetchrow(
-        "SELECT login_time, logoff_time, timezone FROM organizations WHERE id = $1", org_id
+        "SELECT login_time, logoff_time, timezone, location_sync_interval FROM organizations WHERE id = $1", org_id
     )
 
     return JSONResponse(status_code=200, content={
@@ -134,5 +147,6 @@ async def update_config(request: Request):
             "login_time": org["login_time"].strftime("%H:%M") if org["login_time"] else DEFAULTS["login_time"],
             "logoff_time": org["logoff_time"].strftime("%H:%M") if org["logoff_time"] else DEFAULTS["logoff_time"],
             "timezone": org["timezone"] or DEFAULTS["timezone"],
+            "location_sync_interval": org["location_sync_interval"] or DEFAULTS["location_sync_interval"],
         }
     })

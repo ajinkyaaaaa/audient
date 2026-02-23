@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -80,6 +80,7 @@ export default function SentryScreen({ token, currentUserId, userName }: SentryS
   const [monthDots, setMonthDots] = useState<Record<string, number>>({});
   const [dateRecords, setDateRecords] = useState<DateAttendanceRecord[]>([]);
   const [loadingDate, setLoadingDate] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<'Active' | 'Members' | 'Offline'>('Members');
 
   // Members modal
   const [showMembers, setShowMembers] = useState(false);
@@ -201,11 +202,17 @@ export default function SentryScreen({ token, currentUserId, userName }: SentryS
     return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
+  const activeCount = employees.filter(e => e.status === 'Active').length;
+  const offlineCount = employees.filter(e => e.status === 'Offline').length;
+
+  const filteredRecords = useMemo(() => {
+    if (selectedFilter === 'Active') return dateRecords.filter(r => employees.find(e => e.id === r.user_id)?.status === 'Active');
+    if (selectedFilter === 'Offline') return dateRecords.filter(r => employees.find(e => e.id === r.user_id)?.status === 'Offline');
+    return dateRecords; // Members — not used for rendering but keep for count
+  }, [selectedFilter, dateRecords, employees]);
+
   if (!fontsLoaded) return null;
 
-  const activeCount = employees.filter(e => e.status === 'Active').length;
-  const awayCount = employees.filter(e => e.status === 'Away').length;
-  const offlineCount = employees.filter(e => e.status === 'Offline').length;
   const calDays = getCalendarDays(calYear, calMonth);
 
   const selParts = selectedDate.split('-');
@@ -296,26 +303,38 @@ export default function SentryScreen({ token, currentUserId, userName }: SentryS
           </View>
 
           <View style={styles.statPairsCol}>
-            <View style={styles.statPairCard}>
-              <View style={styles.statPairItem}>
-                <Text style={styles.statPairValue}>{employees.length}</Text>
-                <Text style={styles.statPairLabel}>Members</Text>
-              </View>
-              <View style={styles.statPairDivider} />
-              <View style={styles.statPairItem}>
-                <Text style={[styles.statPairValue, { color: '#16A34A' }]}>{activeCount}</Text>
-                <Text style={styles.statPairLabel}>Active</Text>
-              </View>
+            {/* Segment 1: Active | Offline */}
+            <View style={styles.segmentCard}>
+              <TouchableOpacity
+                style={[styles.segmentItem, selectedFilter === 'Active' && styles.segmentItemSelected]}
+                onPress={() => setSelectedFilter('Active')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.segmentValue, { color: selectedFilter === 'Active' ? '#22c55e' : '#16A34A' }]}>{activeCount}</Text>
+                <Text style={[styles.segmentLabel, selectedFilter === 'Active' && styles.segmentLabelSelected]}>Active</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.segmentItem, selectedFilter === 'Offline' && styles.segmentItemSelected]}
+                onPress={() => setSelectedFilter('Offline')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.segmentValue, { color: selectedFilter === 'Offline' ? '#4b5563' : '#9ca3af' }]}>{offlineCount}</Text>
+                <Text style={[styles.segmentLabel, selectedFilter === 'Offline' && styles.segmentLabelSelected]}>Offline</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.statPairCard}>
-              <View style={styles.statPairItem}>
-                <Text style={[styles.statPairValue, { color: '#D97706' }]}>{awayCount}</Text>
-                <Text style={styles.statPairLabel}>Away</Text>
-              </View>
-              <View style={styles.statPairDivider} />
-              <View style={styles.statPairItem}>
-                <Text style={[styles.statPairValue, { color: '#9ca3af' }]}>{offlineCount}</Text>
-                <Text style={styles.statPairLabel}>Offline</Text>
+            {/* Segment 2: Members | Symbol */}
+            <View style={styles.segmentCard}>
+              <TouchableOpacity
+                style={[styles.segmentItem, selectedFilter === 'Members' && styles.segmentItemSelected]}
+                onPress={() => setSelectedFilter('Members')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.segmentValue, { color: selectedFilter === 'Members' ? '#1a1a1a' : '#4a5568' }]}>{employees.length}</Text>
+                <Text style={[styles.segmentLabel, selectedFilter === 'Members' && styles.segmentLabelSelected]}>Members</Text>
+              </TouchableOpacity>
+              <View style={styles.segmentItem}>
+                <Ionicons name="construct-outline" size={20} color="#C8C8CC" />
+                <Text style={styles.segmentLabel}>—</Text>
               </View>
             </View>
           </View>
@@ -332,25 +351,78 @@ export default function SentryScreen({ token, currentUserId, userName }: SentryS
         <View style={styles.listCard}>
           <View style={styles.dateHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="calendar" size={18} color="#C05800" />
-              <Text style={styles.sectionTitle}>Logins — {selectedLabel}</Text>
+              <Ionicons
+                name={selectedFilter === 'Members' ? 'people' : 'calendar'}
+                size={18}
+                color="#C05800"
+              />
+              <Text style={styles.sectionTitle}>
+                {selectedFilter === 'Members' ? 'Team Members' :
+                 selectedFilter === 'Active' ? `Active — ${selectedLabel}` :
+                 `Offline — ${selectedLabel}`}
+              </Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={styles.countBadge}>
-                <Text style={styles.countBadgeText}>{dateRecords.length}</Text>
+                <Text style={styles.countBadgeText}>
+                  {selectedFilter === 'Members' ? employees.length : filteredRecords.length}
+                </Text>
               </View>
-              <TouchableOpacity onPress={loadDateAttendance} style={styles.refreshButton}>
-                <Ionicons name="refresh" size={16} color="#4a5568" />
-              </TouchableOpacity>
+              {selectedFilter !== 'Members' && (
+                <TouchableOpacity onPress={loadDateAttendance} style={styles.refreshButton}>
+                  <Ionicons name="refresh" size={16} color="#4a5568" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
-          {loadingDate ? (
+          {selectedFilter === 'Members' ? (
+            employees.length === 0 ? (
+              <Text style={styles.emptyText}>No team members</Text>
+            ) : (
+              employees.map((emp) => {
+                const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                const isYou = emp.id === currentUserId;
+                const statusColor = emp.status === 'Active' ? '#16A34A' : emp.status === 'Away' ? '#D97706' : '#9ca3af';
+                const statusBg = emp.status === 'Active' ? 'rgba(22,163,74,0.08)' : emp.status === 'Away' ? 'rgba(217,119,6,0.08)' : 'rgba(156,163,175,0.08)';
+                return (
+                  <TouchableOpacity
+                    key={emp.id}
+                    style={styles.row}
+                    onPress={() => navigation.navigate('EmployeeDetail', { employeeId: emp.id, employeeName: emp.name })}
+                    activeOpacity={0.6}
+                  >
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={[styles.avatar, emp.role === 'admin' && styles.avatarAdmin]}>
+                        <Text style={[styles.avatarText, emp.role === 'admin' && { color: '#C05800' }]}>{initials}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={[styles.empName, isYou && styles.empNameYou]} numberOfLines={1}>{emp.name}</Text>
+                          {emp.role === 'admin' && <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>Admin</Text></View>}
+                        </View>
+                        <Text style={styles.empEmail} numberOfLines={1}>{emp.email}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.indicators}>
+                      <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
+                        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                        <Text style={[styles.statusText, { color: statusColor }]}>{emp.status}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={14} color="#D4C8A0" />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )
+          ) : loadingDate ? (
             <ActivityIndicator color="#3d7b5f" style={{ marginVertical: 20 }} />
-          ) : dateRecords.length === 0 ? (
-            <Text style={styles.emptyText}>No logins on this date</Text>
+          ) : filteredRecords.length === 0 ? (
+            <Text style={styles.emptyText}>
+              {selectedFilter === 'Active' ? 'No active employees on this date' : 'No offline employees on this date'}
+            </Text>
           ) : (
-            dateRecords.map((rec) => {
+            filteredRecords.map((rec) => {
               const initials = rec.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
               const isYou = rec.user_id === currentUserId;
               const empStatus = employees.find(e => e.id === rec.user_id)?.status;
@@ -363,17 +435,13 @@ export default function SentryScreen({ token, currentUserId, userName }: SentryS
                   onPress={() => navigation.navigate('EmployeeDetail', { employeeId: rec.user_id, employeeName: rec.name })}
                   activeOpacity={0.6}
                 >
-                  {/* Avatar + name + email */}
                   <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                     <View style={[styles.avatar, rec.role === 'admin' && styles.avatarAdmin]}>
                       <Text style={[styles.avatarText, rec.role === 'admin' && { color: '#C05800' }]}>{initials}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text
-                          style={[styles.empName, isYou && styles.empNameYou]}
-                          numberOfLines={1}
-                        >{rec.name}</Text>
+                        <Text style={[styles.empName, isYou && styles.empNameYou]} numberOfLines={1}>{rec.name}</Text>
                         {rec.role === 'admin' && (
                           <View style={styles.adminBadge}>
                             <Text style={styles.adminBadgeText}>Admin</Text>
@@ -383,8 +451,6 @@ export default function SentryScreen({ token, currentUserId, userName }: SentryS
                       <Text style={styles.empEmail} numberOfLines={1}>{rec.email}</Text>
                     </View>
                   </View>
-
-                  {/* Right: active badge + on-time + GPS + chevron */}
                   <View style={styles.indicators}>
                     {isActive && (
                       <View style={styles.activeBadge}>
@@ -843,6 +909,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     justifyContent: 'flex-end',
+  },
+
+  // KPI segmented control
+  segmentCard: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(116,116,128,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    padding: 3,
+    gap: 2,
+  },
+  segmentItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 9,
+    gap: 3,
+  },
+  segmentItemSelected: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  segmentValue: {
+    fontSize: 22,
+    fontFamily: 'Oswald_700Bold',
+  },
+  segmentLabel: {
+    fontSize: 9,
+    fontFamily: 'Oswald_500Medium',
+    color: 'rgba(0,0,0,0.38)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  segmentLabelSelected: {
+    color: '#1a1a1a',
+    fontFamily: 'Oswald_600SemiBold',
   },
 
   // Status pill
