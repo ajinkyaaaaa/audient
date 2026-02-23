@@ -1,4 +1,24 @@
-const API_URL = 'http://localhost:3001/api';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
+function getApiUrl(): string {
+  if (__DEV__) {
+    // In Expo Go on a physical device, debuggerHost is the Mac's IP:port (e.g. "192.168.1.5:8081")
+    const debuggerHost = Constants.expoGoConfig?.debuggerHost;
+    if (debuggerHost) {
+      const host = debuggerHost.split(':')[0];
+      return `http://${host}:3001/api`;
+    }
+    // Android emulator: 10.0.2.2 routes to the host machine
+    if (Platform.OS === 'android') {
+      return 'http://10.0.2.2:3001/api';
+    }
+  }
+  // iOS Simulator and production fallback
+  return 'http://localhost:3001/api';
+}
+
+const API_URL = getApiUrl();
 
 type User = {
   id: number;
@@ -11,6 +31,8 @@ export type OrgConfig = {
   login_time: string;
   logoff_time: string;
   timezone: string;
+  org_name?: string;
+  join_code?: string;
 };
 
 type AuthResponse = {
@@ -49,11 +71,14 @@ export async function register(
   role: 'admin' | 'employee' = 'employee',
   adminSecret?: string,
   organizationName?: string,
+  joinCode?: string,
 ): Promise<AuthResponse> {
   const body: Record<string, unknown> = { name, email, password, role };
   if (role === 'admin') {
     body.admin_secret = adminSecret;
     body.organization_name = organizationName;
+  } else {
+    body.join_code = joinCode;
   }
   return request<AuthResponse>('/auth/register', {
     method: 'POST',

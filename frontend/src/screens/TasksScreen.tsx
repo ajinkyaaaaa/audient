@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   useFonts,
   Oswald_400Regular,
@@ -9,6 +11,8 @@ import {
 } from '@expo-google-fonts/oswald';
 
 export default function TasksScreen() {
+  const navigation = useNavigation();
+  const openDrawer = () => navigation.dispatch(DrawerActions.openDrawer());
   const [fontsLoaded] = useFonts({
     Oswald_400Regular,
     Oswald_500Medium,
@@ -21,6 +25,11 @@ export default function TasksScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
+            <Ionicons name="menu" size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+        )}
         <Text style={styles.headerTitle}>Tasks</Text>
       </View>
       <View style={styles.centered}>
@@ -37,9 +46,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f0',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
     paddingHorizontal: 24,
     paddingBottom: 16,
+  },
+  hamburger: {
+    padding: 4,
   },
   headerTitle: {
     fontSize: 24,

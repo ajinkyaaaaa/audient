@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import {
   useFonts,
   Oswald_400Regular,
@@ -40,6 +41,8 @@ const COMMON_TIMEZONES = [
 ];
 
 export default function ConfigScreen({ token }: ConfigScreenProps) {
+  const navigation = useNavigation();
+  const openDrawer = () => navigation.dispatch(DrawerActions.openDrawer());
   const [config, setConfig] = useState<OrgConfig>({
     login_time: '09:00',
     logoff_time: '18:00',
@@ -123,6 +126,11 @@ export default function ConfigScreen({ token }: ConfigScreenProps) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.titleRow}>
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
+                <Ionicons name="menu" size={24} color="#1a1a1a" />
+              </TouchableOpacity>
+            )}
             <Ionicons name="settings" size={24} color="#C05800" />
             <Text style={styles.title}>Configuration</Text>
           </View>
@@ -140,6 +148,25 @@ export default function ConfigScreen({ token }: ConfigScreenProps) {
           <View style={styles.errorBox}>
             <Ionicons name="alert-circle" size={18} color="#ef4444" />
             <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        {/* Join Code Card */}
+        {config.join_code ? (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="people" size={20} color="#C05800" />
+              <Text style={styles.cardTitle}>Team Join Code</Text>
+            </View>
+            <Text style={styles.cardDescription}>
+              Share this code with employees so they can register and join your organization.
+            </Text>
+            <View style={styles.joinCodeBox}>
+              <Text style={styles.joinCodeText}>{config.join_code}</Text>
+            </View>
+            {config.org_name ? (
+              <Text style={styles.orgNameText}>Organization: {config.org_name}</Text>
+            ) : null}
           </View>
         ) : null}
 
@@ -314,6 +341,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  hamburger: {
+    padding: 4,
+  },
   title: {
     fontSize: 28,
     fontFamily: 'Oswald_700Bold',
@@ -387,6 +417,28 @@ const styles = StyleSheet.create({
     color: '#A89070',
     marginBottom: 20,
     lineHeight: 18,
+  },
+  joinCodeBox: {
+    backgroundColor: '#FFF9E6',
+    borderWidth: 2,
+    borderColor: '#C05800',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  joinCodeText: {
+    fontSize: 26,
+    fontFamily: 'Oswald_700Bold',
+    color: '#C05800',
+    letterSpacing: 4,
+  },
+  orgNameText: {
+    fontSize: 12,
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
+    textAlign: 'center',
   },
 
   // Time inputs

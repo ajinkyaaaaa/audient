@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date as DateType, datetime, time
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Query, Request
@@ -138,6 +138,11 @@ async def get_attendance_by_date(
     if err:
         return err
 
+    try:
+        parsed_date = DateType.fromisoformat(date)
+    except ValueError:
+        return JSONResponse(status_code=400, content={"error": "Invalid date format, expected YYYY-MM-DD"})
+
     pool = get_pool()
 
     rows = await pool.fetch(
@@ -147,11 +152,11 @@ async def get_attendance_by_date(
         FROM attendance a
         JOIN users u ON u.id = a.user_id
         WHERE u.organization_id = $1
-          AND a.login_at::date = $2::date
+          AND a.login_at::date = $2
         ORDER BY a.login_at DESC
         """,
         org_id,
-        date,
+        parsed_date,
     )
 
     records = [

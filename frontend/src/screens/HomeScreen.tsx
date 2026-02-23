@@ -11,7 +11,7 @@ import {
   Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +41,7 @@ type HomeScreenProps = {
 
 export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
   const stackNav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const openDrawer = () => stackNav.dispatch(DrawerActions.openDrawer());
   const [fontsLoaded] = useFonts({
     Oswald_400Regular,
     Oswald_500Medium,
@@ -162,9 +163,16 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Hello, {firstName}!</Text>
-            <Text style={styles.subGreeting}>What are you looking for today?</Text>
+          <View style={styles.headerLeft}>
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
+                <Ionicons name="menu" size={24} color="#1a1a1a" />
+              </TouchableOpacity>
+            )}
+            <View>
+              <Text style={styles.greeting}>Hello, {firstName}!</Text>
+              <Text style={styles.subGreeting}>What are you looking for today?</Text>
+            </View>
           </View>
           <View style={styles.headerRight}>
             <View style={styles.liveBadge}>
@@ -315,6 +323,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 24,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  hamburger: {
+    padding: 4,
+    marginTop: 2,
   },
   greeting: {
     fontSize: 28,

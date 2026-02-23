@@ -11,7 +11,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   useFonts,
@@ -37,6 +38,7 @@ const healthColor: Record<string, string> = {
 
 export default function EngagementsScreen({ token }: Props) {
   const stackNav = useNavigation<NativeStackNavigationProp<EngagementsStackParamList>>();
+  const openDrawer = () => stackNav.dispatch(DrawerActions.openDrawer());
 
   const [fontsLoaded] = useFonts({
     Oswald_400Regular,
@@ -155,6 +157,11 @@ export default function EngagementsScreen({ token }: Props) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
+            <Ionicons name="menu" size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+        )}
         <Text style={styles.headerTitle}>Engagements</Text>
       </View>
 
@@ -398,9 +405,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f0',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
     paddingHorizontal: 24,
     paddingBottom: 16,
+  },
+  hamburger: {
+    padding: 4,
   },
   headerTitle: {
     fontSize: 24,

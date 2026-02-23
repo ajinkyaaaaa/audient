@@ -59,6 +59,7 @@ export default function AuthScreen({ onLogin, orgConfig }: AuthScreenProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminSecret, setAdminSecret] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -103,6 +104,11 @@ export default function AuthScreen({ onLogin, orgConfig }: AuthScreenProps) {
         }
         if (!orgName) {
           setError('Organization name is required for admin accounts');
+          return;
+        }
+      } else {
+        if (!joinCode) {
+          setError('Organization join code is required');
           return;
         }
       }
@@ -166,6 +172,7 @@ export default function AuthScreen({ onLogin, orgConfig }: AuthScreenProps) {
           isAdmin ? 'admin' : 'employee',
           isAdmin ? adminSecret : undefined,
           isAdmin ? orgName : undefined,
+          isAdmin ? undefined : joinCode,
         );
         setIsLogin(true);
         setName('');
@@ -174,6 +181,7 @@ export default function AuthScreen({ onLogin, orgConfig }: AuthScreenProps) {
         setIsAdmin(false);
         setAdminSecret('');
         setOrgName('');
+        setJoinCode('');
         setSuccess('Account created successfully! Please sign in.');
       }
     } catch (err: any) {
@@ -193,6 +201,7 @@ export default function AuthScreen({ onLogin, orgConfig }: AuthScreenProps) {
     setIsAdmin(false);
     setAdminSecret('');
     setOrgName('');
+    setJoinCode('');
     setError('');
     setSuccess('');
   };
@@ -304,6 +313,22 @@ export default function AuthScreen({ onLogin, orgConfig }: AuthScreenProps) {
               secureTextEntry
             />
             <Ionicons name="shield-checkmark-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
+          </View>
+        )}
+
+        {/* Join Code (Sign Up, employee only) */}
+        {!isLogin && !isAdmin && (
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="Organization join code"
+              placeholderTextColor="#9ca3af"
+              value={joinCode}
+              onChangeText={(t) => setJoinCode(t.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            <Ionicons name="people-outline" size={18} color="#9ca3af" style={styles.inputIcon} />
           </View>
         )}
 

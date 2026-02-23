@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { DrawerParamList } from './types';
@@ -29,18 +30,19 @@ type Props = {
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
+const isWeb = Platform.OS === 'web';
+
 export default function AppNavigator({ user, token, onLogout, orgConfig }: Props) {
   return (
     <NavigationContainer>
       <Drawer.Navigator
           screenOptions={{
             headerShown: false,
-            drawerType: 'permanent',
-            drawerStyle: {
-              width: 64,
-              backgroundColor: 'transparent',
-            },
-            overlayColor: 'transparent',
+            drawerType: isWeb ? 'permanent' : 'front',
+            drawerStyle: isWeb
+              ? { width: 64, backgroundColor: 'transparent' }
+              : { width: 280 },
+            overlayColor: isWeb ? 'transparent' : 'rgba(0,0,0,0.5)',
             sceneContainerStyle: {
               backgroundColor: '#f5f5f0',
             },
@@ -61,7 +63,7 @@ export default function AppNavigator({ user, token, onLogout, orgConfig }: Props
           <Drawer.Screen name="Tasks" component={TasksScreen} />
           {user.role === 'admin' && (
             <Drawer.Screen name="Sentry">
-              {() => <SentryScreen token={token} currentUserId={user.id} />}
+              {() => <SentryScreen token={token} currentUserId={user.id} userName={user.name} />}
             </Drawer.Screen>
           )}
           {user.role === 'admin' && (

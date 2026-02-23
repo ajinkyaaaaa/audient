@@ -122,6 +122,10 @@ async def init_db():
         await conn.execute("""
             ALTER TABLE attendance ADD COLUMN IF NOT EXISTS period VARCHAR(20);
         """)
+        # Migrate: org join code
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS join_code VARCHAR(20) UNIQUE;
+        """)
     print("Database initialized — tables ready")
 
 

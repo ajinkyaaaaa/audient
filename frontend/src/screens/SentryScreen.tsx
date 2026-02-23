@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,11 @@ import {
   Easing,
   RefreshControl,
   TouchableOpacity,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import {
   useFonts,
   Oswald_400Regular,
@@ -23,13 +26,16 @@ import {
   getSentryEmployees,
   getAttendanceByDate,
   getMonthSummary,
+  getOrgConfig,
   Employee,
   DateAttendanceRecord,
+  OrgConfig,
 } from '../services/api';
 
 type SentryScreenProps = {
   token: string;
   currentUserId: number;
+  userName: string;
 };
 
 // Calendar helpers
@@ -52,19 +58,30 @@ function getCalendarDays(year: number, month: number) {
   return days;
 }
 
-export default function SentryScreen({ token, currentUserId }: SentryScreenProps) {
+export default function SentryScreen({ token, currentUserId, userName }: SentryScreenProps) {
+  const navigation = useNavigation();
+  const openDrawer = () => navigation.dispatch(DrawerActions.openDrawer());
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Org config
+  const [orgData, setOrgData] = useState<Pick<OrgConfig, 'org_name' | 'join_code'>>({});
+
   // Calendar state
   const today = new Date();
+  const todayStr = toDateStr(today);
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState(toDateStr(today));
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [monthDots, setMonthDots] = useState<Record<string, number>>({});
   const [dateRecords, setDateRecords] = useState<DateAttendanceRecord[]>([]);
   const [loadingDate, setLoadingDate] = useState(false);
+
+  // Members modal
+  const [showMembers, setShowMembers] = useState(false);
+  const [memberSearch, setMemberSearch] = useState('');
 
   const [fontsLoaded] = useFonts({
     Oswald_400Regular,
@@ -96,7 +113,6 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
     }
   }, [token]);
 
-  // Load month summary for calendar dots
   const loadMonthSummary = useCallback(async () => {
     try {
       const data = await getMonthSummary(token, calYear, calMonth + 1);
@@ -104,7 +120,6 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
     } catch {}
   }, [token, calYear, calMonth]);
 
-  // Load attendance for selected date
   const loadDateAttendance = useCallback(async () => {
     setLoadingDate(true);
     try {
@@ -115,9 +130,35 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
     }
   }, [token, selectedDate]);
 
+  useEffect(() => {
+    getOrgConfig(token).then(data => {
+      setOrgData({ org_name: data.config.org_name, join_code: data.config.join_code });
+    }).catch(() => {});
+  }, [token]);
+
   useEffect(() => { loadEmployees(); }, [loadEmployees]);
   useEffect(() => { loadMonthSummary(); }, [loadMonthSummary]);
   useEffect(() => { loadDateAttendance(); }, [loadDateAttendance]);
+
+  // Refs so interval always calls latest versions
+  const loadDateAttendanceRef = useRef(loadDateAttendance);
+  useEffect(() => { loadDateAttendanceRef.current = loadDateAttendance; }, [loadDateAttendance]);
+  const selectedDateRef = useRef(selectedDate);
+  useEffect(() => { selectedDateRef.current = selectedDate; }, [selectedDate]);
+
+  // Poll every 15s — employees always, date attendance only for today
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    pollRef.current = setInterval(() => {
+      loadEmployees();
+      if (selectedDateRef.current === toDateStr(new Date())) {
+        loadDateAttendanceRef.current();
+      }
+    }, 15000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [loadEmployees]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -145,8 +186,7 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
     if (!iso) return 'Never';
     const d = new Date(iso);
     const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
+    const diffMins = Math.floor((now.getTime() - d.getTime()) / 60000);
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     const diffHours = Math.floor(diffMins / 60);
@@ -156,8 +196,7 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
 
   const fmtTime = (iso: string | null) => {
     if (!iso) return '—';
-    const d = new Date(iso);
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
   if (!fontsLoaded) return null;
@@ -166,14 +205,20 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
   const awayCount = employees.filter(e => e.status === 'Away').length;
   const offlineCount = employees.filter(e => e.status === 'Offline').length;
   const calDays = getCalendarDays(calYear, calMonth);
-  const todayStr = toDateStr(today);
 
-  // Format selected date for display
   const selParts = selectedDate.split('-');
   const selDateObj = new Date(parseInt(selParts[0]), parseInt(selParts[1]) - 1, parseInt(selParts[2]));
   const selectedLabel = selectedDate === todayStr
     ? 'Today'
     : selDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  // Members modal data
+  const searchLower = memberSearch.toLowerCase();
+  const filteredEmployees = employees.filter(e =>
+    (e.name.toLowerCase().includes(searchLower) || e.email.toLowerCase().includes(searchLower))
+  );
+  const modalAdmins = filteredEmployees.filter(e => e.role === 'admin');
+  const modalEmployees = filteredEmployees.filter(e => e.role !== 'admin');
 
   return (
     <View style={styles.container}>
@@ -184,22 +229,29 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <View style={styles.titleRow}>
-              <Ionicons name="eye" size={24} color="#C05800" />
-              <Text style={styles.title}>Sentry</Text>
+          <View style={styles.headerLeft}>
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
+                <Ionicons name="menu" size={24} color="#1a1a1a" />
+              </TouchableOpacity>
+            )}
+            <View>
+              <View style={styles.titleRow}>
+                <Ionicons name="eye" size={24} color="#C05800" />
+                <Text style={styles.title}>Sentry</Text>
+              </View>
+              <Text style={styles.adminName}>{userName}</Text>
+              {(orgData.org_name || orgData.join_code) ? (
+                <Text style={styles.orgInfo}>
+                  {orgData.org_name}{orgData.org_name && orgData.join_code ? ' · ' : ''}{orgData.join_code}
+                </Text>
+              ) : null}
             </View>
-            <Text style={styles.subtitle}>Employee activity monitor</Text>
-          </View>
-          <View style={styles.onlineBadge}>
-            <Animated.View style={[styles.onlineDot, { opacity: pulseAnim }]} />
-            <Text style={styles.onlineText}>{activeCount} Active</Text>
           </View>
         </View>
 
-        {/* KPI Row — calendar first, then compact stat pairs */}
+        {/* KPI Row */}
         <View style={styles.kpiRow}>
-          {/* Compact Calendar Tile */}
           <View style={styles.calendarCard}>
             <View style={styles.calHeader}>
               <TouchableOpacity onPress={prevMonth} style={styles.calArrow}>
@@ -241,7 +293,6 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
             </View>
           </View>
 
-          {/* Compact stat pairs */}
           <View style={styles.statPairsCol}>
             <View style={styles.statPairCard}>
               <View style={styles.statPairItem}>
@@ -268,6 +319,13 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
           </View>
         </View>
 
+        {/* View Members Button */}
+        <TouchableOpacity style={styles.membersButton} onPress={() => setShowMembers(true)} activeOpacity={0.7}>
+          <Ionicons name="people-outline" size={18} color="#4a5568" />
+          <Text style={styles.membersButtonText}>Team Members ({employees.length})</Text>
+          <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
+        </TouchableOpacity>
+
         {/* Date Attendance Section */}
         <View style={styles.listCard}>
           <View style={styles.dateHeader}>
@@ -275,8 +333,13 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
               <Ionicons name="calendar" size={18} color="#C05800" />
               <Text style={styles.sectionTitle}>Logins — {selectedLabel}</Text>
             </View>
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{dateRecords.length}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{dateRecords.length}</Text>
+              </View>
+              <TouchableOpacity onPress={loadDateAttendance} style={styles.refreshButton}>
+                <Ionicons name="refresh" size={16} color="#4a5568" />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -288,6 +351,8 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
             dateRecords.map((rec) => {
               const initials = rec.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
               const isYou = rec.user_id === currentUserId;
+              const empStatus = employees.find(e => e.id === rec.user_id)?.status;
+              const isActive = empStatus === 'Active';
               return (
                 <View key={rec.id} style={styles.row}>
                   <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}>
@@ -295,16 +360,14 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
                       <Text style={[styles.avatarText, rec.role === 'admin' && { color: '#C05800' }]}>{initials}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <Text style={styles.empName} numberOfLines={1}>{rec.name}</Text>
-                        {isYou && (
-                          <View style={styles.youBadge}>
-                            <Text style={styles.youBadgeText}>You</Text>
-                          </View>
-                        )}
-                        {rec.role === 'admin' && (
-                          <View style={styles.adminBadge}>
-                            <Text style={styles.adminBadgeText}>Admin</Text>
+                        {isYou && <View style={styles.youBadge}><Text style={styles.youBadgeText}>You</Text></View>}
+                        {rec.role === 'admin' && <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>Admin</Text></View>}
+                        {isActive && (
+                          <View style={styles.activeBadge}>
+                            <View style={styles.activeDot} />
+                            <Text style={styles.activeText}>Active</Text>
                           </View>
                         )}
                       </View>
@@ -325,9 +388,7 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
                     {rec.latitude && rec.longitude ? (
                       <View style={styles.gpsBadge}>
                         <Ionicons name="location" size={12} color="#3d7b5f" />
-                        <Text style={styles.gpsText}>
-                          {rec.latitude.toFixed(3)}, {rec.longitude.toFixed(3)}
-                        </Text>
+                        <Text style={styles.gpsText}>{rec.latitude.toFixed(3)}, {rec.longitude.toFixed(3)}</Text>
                       </View>
                     ) : (
                       <Text style={[styles.cellText, { color: '#D4C8A0' }]}>No GPS</Text>
@@ -338,82 +399,106 @@ export default function SentryScreen({ token, currentUserId }: SentryScreenProps
             })
           )}
         </View>
-
-        {/* All Employees Overview */}
-        {loading ? (
-          <ActivityIndicator color="#3d7b5f" style={{ marginTop: 40 }} />
-        ) : employees.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="people-outline" size={48} color="#D4C8A0" />
-            <Text style={styles.emptyTitle}>No employees yet</Text>
-            <Text style={styles.emptyText}>Employees in your organization will appear here once they register and log in.</Text>
-          </View>
-        ) : (
-          <View style={styles.listCard}>
-            <Text style={styles.sectionTitle}>All Members</Text>
-            {/* Table Header */}
-            <View style={styles.tableHeader}>
-              <Text style={[styles.thText, { flex: 2 }]}>Employee</Text>
-              <Text style={[styles.thText, { flex: 1.5 }]}>Last Login</Text>
-              <Text style={[styles.thText, { flex: 1 }]}>Status</Text>
-              <Text style={[styles.thText, { flex: 0.8, textAlign: 'center' }]}>Logins</Text>
-            </View>
-
-            {employees.map((emp) => {
-              const isYou = emp.id === currentUserId;
-              const initials = emp.name
-                .split(' ')
-                .map(n => n[0])
-                .join('')
-                .toUpperCase()
-                .slice(0, 2);
-
-              const statusColor = emp.status === 'Active' ? '#16A34A' : emp.status === 'Away' ? '#D97706' : '#9ca3af';
-              const statusBg = emp.status === 'Active' ? styles.statusActive : emp.status === 'Away' ? styles.statusAway : styles.statusInactive;
-
-              return (
-                <View key={emp.id} style={styles.row}>
-                  <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={[styles.avatar, emp.role === 'admin' && styles.avatarAdmin]}>
-                      <Text style={[styles.avatarText, emp.role === 'admin' && { color: '#C05800' }]}>{initials}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={styles.empName} numberOfLines={1}>{emp.name}</Text>
-                        {isYou && (
-                          <View style={styles.youBadge}>
-                            <Text style={styles.youBadgeText}>You</Text>
-                          </View>
-                        )}
-                        {emp.role === 'admin' && (
-                          <View style={styles.adminBadge}>
-                            <Text style={styles.adminBadgeText}>Admin</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.empEmail} numberOfLines={1}>{emp.email}</Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.cellText, { flex: 1.5 }]}>{fmtDate(emp.last_login_at)}</Text>
-                  <View style={{ flex: 1 }}>
-                    <View style={[styles.statusPill, statusBg]}>
-                      <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-                      <Text style={[styles.statusText, { color: statusColor }]}>
-                        {emp.status}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.cellText, { flex: 0.8, textAlign: 'center' }]}>{emp.login_count}</Text>
-                </View>
-              );
-            })}
-          </View>
-        )}
       </ScrollView>
+
+      {/* Members Modal */}
+      <Modal visible={showMembers} animationType="slide" presentationStyle="pageSheet">
+        <View style={styles.modalContainer}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <View>
+              <Text style={styles.modalTitle}>Team Members</Text>
+              <Text style={styles.modalSubtitle}>{employees.length} total · {activeCount} active now</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowMembers(false)} style={styles.modalClose}>
+              <Ionicons name="close" size={22} color="#1a1a1a" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Search */}
+          <View style={styles.searchWrapper}>
+            <Ionicons name="search-outline" size={18} color="#9ca3af" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by name or email..."
+              placeholderTextColor="#9ca3af"
+              value={memberSearch}
+              onChangeText={setMemberSearch}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {memberSearch.length > 0 && (
+              <TouchableOpacity onPress={() => setMemberSearch('')}>
+                <Ionicons name="close-circle" size={18} color="#9ca3af" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 40 }}>
+            {/* Admins section */}
+            {modalAdmins.length > 0 && (
+              <>
+                <Text style={styles.memberSectionLabel}>Admins</Text>
+                {modalAdmins.map(emp => <MemberRow key={emp.id} emp={emp} currentUserId={currentUserId} fmtDate={fmtDate} />)}
+              </>
+            )}
+
+            {/* Separator */}
+            {modalAdmins.length > 0 && modalEmployees.length > 0 && (
+              <View style={styles.memberSectionDivider} />
+            )}
+
+            {/* Employees section */}
+            {modalEmployees.length > 0 && (
+              <>
+                <Text style={styles.memberSectionLabel}>Employees</Text>
+                {modalEmployees.map(emp => <MemberRow key={emp.id} emp={emp} currentUserId={currentUserId} fmtDate={fmtDate} />)}
+              </>
+            )}
+
+            {filteredEmployees.length === 0 && (
+              <Text style={styles.emptyText}>No members match your search</Text>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
 
+// ── Member row sub-component ─────────────────────────────────────────────────
+function MemberRow({ emp, currentUserId, fmtDate }: { emp: Employee; currentUserId: number; fmtDate: (iso: string | null) => string }) {
+  const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const isYou = emp.id === currentUserId;
+  const statusColor = emp.status === 'Active' ? '#16A34A' : emp.status === 'Away' ? '#D97706' : '#9ca3af';
+  const statusBg = emp.status === 'Active' ? 'rgba(22,163,74,0.08)' : emp.status === 'Away' ? 'rgba(217,119,6,0.08)' : 'rgba(156,163,175,0.08)';
+
+  return (
+    <View style={styles.memberRow}>
+      <View style={[styles.avatar, emp.role === 'admin' && styles.avatarAdmin]}>
+        <Text style={[styles.avatarText, emp.role === 'admin' && { color: '#C05800' }]}>{initials}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.empName} numberOfLines={1}>{emp.name}</Text>
+          {isYou && <View style={styles.youBadge}><Text style={styles.youBadgeText}>You</Text></View>}
+          {emp.role === 'admin' && <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>Admin</Text></View>}
+        </View>
+        <Text style={styles.empEmail} numberOfLines={1}>{emp.email}</Text>
+        <Text style={[styles.empEmail, { marginTop: 2 }]}>Last login: {fmtDate(emp.last_login_at)}</Text>
+      </View>
+      <View style={{ alignItems: 'flex-end', gap: 6 }}>
+        <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
+          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+          <Text style={[styles.statusText, { color: statusColor }]}>{emp.status}</Text>
+        </View>
+        <Text style={styles.loginCountText}>{emp.login_count} logins</Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -433,6 +518,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 24,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  hamburger: {
+    padding: 4,
+    marginTop: 2,
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -443,12 +537,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Oswald_700Bold',
     color: '#1a1a1a',
   },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: 'Oswald_400Regular',
+  adminName: {
+    fontSize: 13,
+    fontFamily: 'Oswald_500Medium',
     color: '#4a5568',
     marginTop: 4,
     marginLeft: 34,
+  },
+  orgInfo: {
+    fontSize: 11,
+    fontFamily: 'Oswald_400Regular',
+    color: '#A89070',
+    marginTop: 2,
+    marginLeft: 34,
+    letterSpacing: 0.5,
   },
   onlineBadge: {
     flexDirection: 'row',
@@ -473,11 +575,11 @@ const styles = StyleSheet.create({
     color: '#16A34A',
   },
 
-  // KPI row — calendar + compact stat pairs
+  // KPI row
   kpiRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 12,
   },
   statPairsCol: {
     flex: 1,
@@ -517,7 +619,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Compact Calendar tile
+  // Calendar tile
   calendarCard: {
     flex: 1.5,
     backgroundColor: '#FFFFFF',
@@ -545,13 +647,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Oswald_600SemiBold',
     color: '#1a1a1a',
   },
-  calRow: {
-    flexDirection: 'row',
-  },
-  calGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
+  calRow: { flexDirection: 'row' },
+  calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   calCell: {
     width: `${100 / 7}%`,
     paddingVertical: 3,
@@ -559,38 +656,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 4,
   },
-  calCellSelected: {
-    backgroundColor: '#C05800',
+  calCellSelected: { backgroundColor: '#C05800' },
+  calCellToday: { backgroundColor: 'rgba(61,123,95,0.1)' },
+  calDayLabel: { fontSize: 8, fontFamily: 'Oswald_500Medium', color: '#9ca3af' },
+  calDayText: { fontSize: 10, fontFamily: 'Oswald_500Medium', color: '#1a1a1a' },
+  calDayTextSelected: { color: '#FFFFFF' },
+  calDayTextToday: { color: '#3d7b5f', fontFamily: 'Oswald_700Bold' },
+  calDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#C05800', marginTop: 1 },
+  calDotSelected: { backgroundColor: '#FFFFFF' },
+
+  // Members button
+  membersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    marginBottom: 16,
+    gap: 10,
   },
-  calCellToday: {
-    backgroundColor: 'rgba(61,123,95,0.1)',
-  },
-  calDayLabel: {
-    fontSize: 8,
-    fontFamily: 'Oswald_500Medium',
-    color: '#9ca3af',
-  },
-  calDayText: {
-    fontSize: 10,
+  membersButtonText: {
+    flex: 1,
+    fontSize: 14,
     fontFamily: 'Oswald_500Medium',
     color: '#1a1a1a',
-  },
-  calDayTextSelected: {
-    color: '#FFFFFF',
-  },
-  calDayTextToday: {
-    color: '#3d7b5f',
-    fontFamily: 'Oswald_700Bold',
-  },
-  calDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#C05800',
-    marginTop: 1,
-  },
-  calDotSelected: {
-    backgroundColor: '#FFFFFF',
   },
 
   // Date attendance section
@@ -604,7 +696,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Oswald_700Bold',
     color: '#1a1a1a',
-    marginBottom: 16,
   },
   countBadge: {
     backgroundColor: 'rgba(192,88,0,0.1)',
@@ -616,6 +707,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Oswald_600SemiBold',
     color: '#C05800',
+  },
+  refreshButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Empty state
@@ -638,7 +737,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Oswald_400Regular',
     color: '#9ca3af',
     textAlign: 'center',
-    marginTop: 8,
     paddingVertical: 16,
   },
 
@@ -650,21 +748,6 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     padding: 20,
     marginBottom: 16,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    marginBottom: 4,
-    marginTop: -8,
-  },
-  thText: {
-    fontSize: 11,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 
   // Row
@@ -727,6 +810,27 @@ const styles = StyleSheet.create({
     color: '#C05800',
     textTransform: 'uppercase',
   },
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(22,163,74,0.1)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    gap: 4,
+  },
+  activeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#16A34A',
+  },
+  activeText: {
+    fontSize: 9,
+    fontFamily: 'Oswald_600SemiBold',
+    color: '#16A34A',
+    textTransform: 'uppercase',
+  },
   cellText: {
     fontSize: 13,
     fontFamily: 'Oswald_400Regular',
@@ -759,24 +863,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     gap: 6,
   },
-  statusActive: {
-    backgroundColor: 'rgba(22,163,74,0.08)',
-  },
-  statusAway: {
-    backgroundColor: 'rgba(217,119,6,0.08)',
-  },
-  statusInactive: {
-    backgroundColor: 'rgba(156,163,175,0.08)',
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    fontSize: 11,
-    fontFamily: 'Oswald_500Medium',
-  },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11, fontFamily: 'Oswald_500Medium' },
 
   // Period badge
   periodBadge: {
@@ -786,21 +874,95 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginTop: 3,
   },
-  periodMorning: {
-    backgroundColor: 'rgba(217,119,6,0.1)',
+  periodMorning: { backgroundColor: 'rgba(217,119,6,0.1)' },
+  periodEvening: { backgroundColor: 'rgba(124,58,237,0.1)' },
+  periodBadgeText: { fontSize: 9, fontFamily: 'Oswald_600SemiBold', textTransform: 'uppercase' },
+  periodMorningText: { color: '#D97706' },
+  periodEveningText: { color: '#7C3AED' },
+
+  // Members Modal
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f0',
   },
-  periodEvening: {
-    backgroundColor: 'rgba(124,58,237,0.1)',
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
-  periodBadgeText: {
-    fontSize: 9,
+  modalTitle: {
+    fontSize: 22,
+    fontFamily: 'Oswald_700Bold',
+    color: '#1a1a1a',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Oswald_400Regular',
+    color: '#9ca3af',
+    marginTop: 2,
+  },
+  modalClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Oswald_400Regular',
+    color: '#1a1a1a',
+    paddingVertical: 0,
+  },
+  modalScroll: {
+    flex: 1,
+  },
+  memberSectionLabel: {
+    fontSize: 11,
     fontFamily: 'Oswald_600SemiBold',
+    color: '#9ca3af',
     textTransform: 'uppercase',
+    letterSpacing: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 8,
   },
-  periodMorningText: {
-    color: '#D97706',
+  memberSectionDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 24,
+    marginTop: 8,
   },
-  periodEveningText: {
-    color: '#7C3AED',
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f0',
+  },
+  loginCountText: {
+    fontSize: 11,
+    fontFamily: 'Oswald_400Regular',
+    color: '#9ca3af',
   },
 });

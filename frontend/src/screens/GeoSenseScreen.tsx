@@ -13,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import {
@@ -40,6 +41,8 @@ type Props = {
 };
 
 export default function GeoSenseScreen({ token }: Props) {
+  const navigation = useNavigation();
+  const openDrawer = () => navigation.dispatch(DrawerActions.openDrawer());
   const [fontsLoaded] = useFonts({
     Oswald_400Regular,
     Oswald_500Medium,
@@ -184,7 +187,14 @@ export default function GeoSenseScreen({ token }: Props) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Geo-Sense</Text>
+        <View style={styles.headerLeft}>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
+              <Ionicons name="menu" size={24} color="#1a1a1a" />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.headerTitle}>Geo-Sense</Text>
+        </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => { resetForm(); setShowForm(true); }}
@@ -425,6 +435,14 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
     paddingHorizontal: 24,
     paddingBottom: 16,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  hamburger: {
+    padding: 4,
   },
   headerTitle: {
     fontSize: 24,

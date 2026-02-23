@@ -43,7 +43,7 @@ async def get_config(request: Request):
         return JSONResponse(status_code=200, content={"config": DEFAULTS})
 
     org = await pool.fetchrow(
-        "SELECT login_time, logoff_time, timezone FROM organizations WHERE id = $1",
+        "SELECT name, login_time, logoff_time, timezone, join_code FROM organizations WHERE id = $1",
         user["organization_id"],
     )
     if not org:
@@ -54,6 +54,8 @@ async def get_config(request: Request):
             "login_time": org["login_time"].strftime("%H:%M") if org["login_time"] else DEFAULTS["login_time"],
             "logoff_time": org["logoff_time"].strftime("%H:%M") if org["logoff_time"] else DEFAULTS["logoff_time"],
             "timezone": org["timezone"] or DEFAULTS["timezone"],
+            "org_name": org["name"],
+            "join_code": org["join_code"],
         }
     })
 

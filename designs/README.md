@@ -13,3 +13,6 @@ Place Figma exports here as PNG images for Claude to reference during developmen
 | File | Description |
 | ---- | ----------- |
 | _Add entries as you export designs_ | |
+
+
+device udid 00008110-0012284C3491401E

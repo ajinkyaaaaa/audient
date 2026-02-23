@@ -42,6 +42,8 @@ async def register(request: Request):
     admin_secret = body.get("admin_secret", "")
     org_name = body.get("organization_name", "")
 
+    join_code = body.get("join_code", "")
+
     if not name or not email or not password:
         return JSONResponse(
             status_code=400,
@@ -58,6 +60,12 @@ async def register(request: Request):
             return JSONResponse(
                 status_code=400,
                 content={"error": "Organization name is required for admin accounts"},
+            )
+    else:
+        if not join_code:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Organization join code is required"},
             )
 
     pool = get_pool()
@@ -76,6 +84,16 @@ async def register(request: Request):
             "INSERT INTO organizations (name) VALUES ($1) RETURNING id",
             org_name,
         )
+        org_id = org_row["id"]
+    else:
+        org_row = await pool.fetchrow(
+            "SELECT id FROM organizations WHERE join_code = $1", join_code
+        )
+        if not org_row:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Invalid organization join code"},
+            )
         org_id = org_row["id"]
 
     row = await pool.fetchrow(
