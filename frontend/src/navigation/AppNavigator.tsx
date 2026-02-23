@@ -8,7 +8,7 @@ import GeoSenseScreen from '../screens/GeoSenseScreen';
 import HomeNavigator from './HomeNavigator';
 import EngagementsNavigator from './EngagementsNavigator';
 import TasksScreen from '../screens/TasksScreen';
-import SentryScreen from '../screens/SentryScreen';
+import SentryNavigator from './SentryNavigator';
 import ConfigScreen from '../screens/ConfigScreen';
 import { OrgConfig } from '../services/api';
 
@@ -63,7 +63,7 @@ export default function AppNavigator({ user, token, onLogout, orgConfig }: Props
           <Drawer.Screen name="Tasks" component={TasksScreen} />
           {user.role === 'admin' && (
             <Drawer.Screen name="Sentry">
-              {() => <SentryScreen token={token} currentUserId={user.id} userName={user.name} />}
+              {() => <SentryNavigator token={token} currentUserId={user.id} userName={user.name} />}
             </Drawer.Screen>
           )}
           {user.role === 'admin' && (

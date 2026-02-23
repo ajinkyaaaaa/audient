@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SentryStackParamList } from '../navigation/types';
 import {
   useFonts,
   Oswald_400Regular,
@@ -59,7 +61,7 @@ function getCalendarDays(year: number, month: number) {
 }
 
 export default function SentryScreen({ token, currentUserId, userName }: SentryScreenProps) {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<SentryStackParamList, 'SentryList'>>();
   const openDrawer = () => navigation.dispatch(DrawerActions.openDrawer());
 
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -353,48 +355,56 @@ export default function SentryScreen({ token, currentUserId, userName }: SentryS
               const isYou = rec.user_id === currentUserId;
               const empStatus = employees.find(e => e.id === rec.user_id)?.status;
               const isActive = empStatus === 'Active';
+              const hasGps = !!(rec.latitude && rec.longitude);
               return (
-                <View key={rec.id} style={styles.row}>
-                  <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity
+                  key={rec.id}
+                  style={styles.row}
+                  onPress={() => navigation.navigate('EmployeeDetail', { employeeId: rec.user_id, employeeName: rec.name })}
+                  activeOpacity={0.6}
+                >
+                  {/* Avatar + name + email */}
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                     <View style={[styles.avatar, rec.role === 'admin' && styles.avatarAdmin]}>
                       <Text style={[styles.avatarText, rec.role === 'admin' && { color: '#C05800' }]}>{initials}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <Text style={styles.empName} numberOfLines={1}>{rec.name}</Text>
-                        {isYou && <View style={styles.youBadge}><Text style={styles.youBadgeText}>You</Text></View>}
-                        {rec.role === 'admin' && <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>Admin</Text></View>}
-                        {isActive && (
-                          <View style={styles.activeBadge}>
-                            <View style={styles.activeDot} />
-                            <Text style={styles.activeText}>Active</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text
+                          style={[styles.empName, isYou && styles.empNameYou]}
+                          numberOfLines={1}
+                        >{rec.name}</Text>
+                        {rec.role === 'admin' && (
+                          <View style={styles.adminBadge}>
+                            <Text style={styles.adminBadgeText}>Admin</Text>
                           </View>
                         )}
                       </View>
                       <Text style={styles.empEmail} numberOfLines={1}>{rec.email}</Text>
                     </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cellText}>{fmtTime(rec.login_at)}</Text>
-                    {rec.period && (
-                      <View style={[styles.periodBadge, rec.period === 'Morning' ? styles.periodMorning : styles.periodEvening]}>
-                        <Text style={[styles.periodBadgeText, rec.period === 'Morning' ? styles.periodMorningText : styles.periodEveningText]}>
-                          {rec.period}
-                        </Text>
+
+                  {/* Right: active badge + on-time + GPS + chevron */}
+                  <View style={styles.indicators}>
+                    {isActive && (
+                      <View style={styles.activeBadge}>
+                        <View style={styles.activeDot} />
+                        <Text style={styles.activeText}>Active</Text>
                       </View>
                     )}
+                    <Ionicons
+                      name={rec.on_time ? 'checkmark-circle' : 'time-outline'}
+                      size={18}
+                      color={rec.on_time ? '#16A34A' : '#D97706'}
+                    />
+                    <Ionicons
+                      name={hasGps ? 'location' : 'location-outline'}
+                      size={18}
+                      color={hasGps ? '#16A34A' : '#D4C8A0'}
+                    />
+                    <Ionicons name="chevron-forward" size={14} color="#D4C8A0" />
                   </View>
-                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                    {rec.latitude && rec.longitude ? (
-                      <View style={styles.gpsBadge}>
-                        <Ionicons name="location" size={12} color="#3d7b5f" />
-                        <Text style={styles.gpsText}>{rec.latitude.toFixed(3)}, {rec.longitude.toFixed(3)}</Text>
-                      </View>
-                    ) : (
-                      <Text style={[styles.cellText, { color: '#D4C8A0' }]}>No GPS</Text>
-                    )}
-                  </View>
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
@@ -480,8 +490,7 @@ function MemberRow({ emp, currentUserId, fmtDate }: { emp: Employee; currentUser
       </View>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={styles.empName} numberOfLines={1}>{emp.name}</Text>
-          {isYou && <View style={styles.youBadge}><Text style={styles.youBadgeText}>You</Text></View>}
+          <Text style={[styles.empName, isYou && styles.empNameYou]} numberOfLines={1}>{emp.name}</Text>
           {emp.role === 'admin' && <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>Admin</Text></View>}
         </View>
         <Text style={styles.empEmail} numberOfLines={1}>{emp.email}</Text>
@@ -780,23 +789,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Oswald_500Medium',
     color: '#1a1a1a',
   },
+  empNameYou: {
+    color: '#3d7b5f',
+  },
   empEmail: {
     fontSize: 11,
     fontFamily: 'Oswald_400Regular',
     color: '#9ca3af',
     marginTop: 1,
-  },
-  youBadge: {
-    backgroundColor: 'rgba(61,123,95,0.12)',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-  },
-  youBadgeText: {
-    fontSize: 9,
-    fontFamily: 'Oswald_700Bold',
-    color: '#3d7b5f',
-    textTransform: 'uppercase',
   },
   adminBadge: {
     backgroundColor: 'rgba(192,88,0,0.1)',
@@ -837,20 +837,12 @@ const styles = StyleSheet.create({
     color: '#4a5568',
   },
 
-  // GPS badge
-  gpsBadge: {
+  // Row indicators (active + on-time + GPS)
+  indicators: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(61,123,95,0.08)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  gpsText: {
-    fontSize: 10,
-    fontFamily: 'Oswald_400Regular',
-    color: '#3d7b5f',
+    gap: 8,
+    justifyContent: 'flex-end',
   },
 
   // Status pill
@@ -866,19 +858,6 @@ const styles = StyleSheet.create({
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 11, fontFamily: 'Oswald_500Medium' },
 
-  // Period badge
-  periodBadge: {
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    alignSelf: 'flex-start',
-    marginTop: 3,
-  },
-  periodMorning: { backgroundColor: 'rgba(217,119,6,0.1)' },
-  periodEvening: { backgroundColor: 'rgba(124,58,237,0.1)' },
-  periodBadgeText: { fontSize: 9, fontFamily: 'Oswald_600SemiBold', textTransform: 'uppercase' },
-  periodMorningText: { color: '#D97706' },
-  periodEveningText: { color: '#7C3AED' },
 
   // Members Modal
   modalContainer: {

@@ -16,3 +16,8 @@ export type EngagementsStackParamList = {
   EngagementsList: undefined;
   ClientDetail: { clientId: number };
 };
+
+export type SentryStackParamList = {
+  SentryList: undefined;
+  EmployeeDetail: { employeeId: number; employeeName: string };
+};

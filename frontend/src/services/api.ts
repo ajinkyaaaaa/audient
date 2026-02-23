@@ -371,7 +371,7 @@ export type DateAttendanceRecord = {
   login_at: string | null;
   latitude: number | null;
   longitude: number | null;
-  period: string | null;
+  on_time: boolean;
 };
 
 export async function getAttendanceByDate(

@@ -144,6 +144,12 @@ async def get_attendance_by_date(
         return JSONResponse(status_code=400, content={"error": "Invalid date format, expected YYYY-MM-DD"})
 
     pool = get_pool()
+    org_config = await _get_org_config(org_id)
+    tz = ZoneInfo(org_config["timezone"])
+    login_h, login_m = map(int, org_config["login_time"].split(":"))
+    # Grace window: on-time if logged in within 30 minutes after scheduled login time
+    scheduled_minutes = login_h * 60 + login_m
+    grace_minutes = 30
 
     rows = await pool.fetch(
         """
@@ -159,8 +165,21 @@ async def get_attendance_by_date(
         parsed_date,
     )
 
-    records = [
-        {
+    records = []
+    seen_users: set[int] = set()
+    for r in rows:
+        # Keep only the latest login per user (rows are DESC so first = latest)
+        if r["user_id"] in seen_users:
+            continue
+        seen_users.add(r["user_id"])
+
+        on_time = False
+        if r["login_at"]:
+            login_local = r["login_at"].astimezone(tz) if r["login_at"].tzinfo else r["login_at"].replace(tzinfo=tz)
+            actual_minutes = login_local.hour * 60 + login_local.minute
+            on_time = actual_minutes <= scheduled_minutes + grace_minutes
+
+        records.append({
             "id": r["id"],
             "user_id": r["user_id"],
             "name": r["name"],
@@ -169,10 +188,8 @@ async def get_attendance_by_date(
             "login_at": r["login_at"].isoformat() if r["login_at"] else None,
             "latitude": r["latitude"],
             "longitude": r["longitude"],
-            "period": r["period"],
-        }
-        for r in rows
-    ]
+            "on_time": on_time,
+        })
 
     return JSONResponse(status_code=200, content={"records": records, "date": date})
 
