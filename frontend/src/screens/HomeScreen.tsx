@@ -5,16 +5,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  ScrollView,
   ActivityIndicator,
   Animated,
   Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import {
   useFonts,
   Oswald_400Regular,
@@ -22,16 +20,8 @@ import {
   Oswald_600SemiBold,
   Oswald_700Bold,
 } from '@expo-google-fonts/oswald';
-import {
-  createRecording,
-  getRecordings,
-  getClients,
-  getLocationProfiles,
-  Recording,
-  Client,
-  LocationProfile,
-} from '../services/api';
-import { HomeStackParamList } from '../navigation/types';
+import { getLocationProfiles, LocationProfile } from '../services/api';
+import MapViewComponent from '../components/MapView';
 
 type HomeScreenProps = {
   user: { id: number; name: string; email: string; login_count?: number };
@@ -39,9 +29,52 @@ type HomeScreenProps = {
   onLogout: () => void;
 };
 
-export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
-  const stackNav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
-  const openDrawer = () => stackNav.dispatch(DrawerActions.openDrawer());
+type WeatherData = {
+  temp: number;
+  code: number;
+  windspeed: number;
+};
+
+function distMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(Δφ / 2) ** 2 +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function weatherIcon(code: number): string {
+  if (code === 0) return 'sunny';
+  if (code <= 2) return 'cloudy-outline';
+  if (code <= 3) return 'cloud';
+  if (code <= 48) return 'cloud-outline';
+  if (code <= 67) return 'rainy';
+  if (code <= 77) return 'snow';
+  if (code <= 82) return 'rainy';
+  return 'thunderstorm';
+}
+
+function weatherLabel(code: number): string {
+  if (code === 0) return 'Clear Sky';
+  if (code <= 2) return 'Partly Cloudy';
+  if (code <= 3) return 'Overcast';
+  if (code <= 48) return 'Foggy';
+  if (code <= 67) return 'Rain';
+  if (code <= 77) return 'Snow';
+  if (code <= 82) return 'Showers';
+  return 'Thunderstorm';
+}
+
+const DEFAULT_CENTER = { latitude: 20.5937, longitude: 78.9629 };
+
+export default function HomeScreen({ user, token }: HomeScreenProps) {
+  const navigation = useNavigation<any>();
+  const openDrawer = () => navigation.dispatch(DrawerActions.openDrawer());
+
   const [fontsLoaded] = useFonts({
     Oswald_400Regular,
     Oswald_500Medium,
@@ -49,557 +82,280 @@ export default function HomeScreen({ user, token, onLogout }: HomeScreenProps) {
     Oswald_700Bold,
   });
 
-  // Recording state
-  const [isRecording, setIsRecording] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  // Dashboard data
-  const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
+  const [gps, setGps] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<'loading' | 'live' | 'denied'>('loading');
   const [locations, setLocations] = useState<LocationProfile[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
-  // Refs
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const elapsedRef = useRef(0);
-
-  // Active badge pulse animation
+  // GPS badge pulse animation
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.3, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.25,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
       ])
     );
     loop.start();
     return () => loop.stop();
   }, [pulseAnim]);
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      const [recData, clientData, locData] = await Promise.all([
-        getRecordings(token),
-        getClients(token),
-        getLocationProfiles(token),
-      ]);
-      setRecordings(recData.recordings);
-      setClients(clientData.clients);
-      setLocations(locData.profiles);
-    } catch {} finally {
-      setLoadingData(false);
-    }
-  }, [token]);
-
+  // GPS tracking
   useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    let sub: Location.LocationSubscription | null = null;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') { setGpsStatus('denied'); return; }
+      setGpsStatus('live');
+      const last = await Location.getLastKnownPositionAsync();
+      if (last) setGps({ latitude: last.coords.latitude, longitude: last.coords.longitude });
+      sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.Balanced, timeInterval: 15000, distanceInterval: 30 },
+        (pos) => setGps({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+      );
+    })();
+    return () => { sub?.remove(); };
   }, []);
 
-  const startRecording = async () => {
-    const { granted } = await Audio.requestPermissionsAsync();
-    if (!granted) return;
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-    recordingRef.current = recording;
-    setElapsedSeconds(0);
-    elapsedRef.current = 0;
-    setIsRecording(true);
-    timerRef.current = setInterval(() => {
-      elapsedRef.current += 1;
-      setElapsedSeconds(elapsedRef.current);
-    }, 1000);
-  };
+  // Location profiles
+  useEffect(() => {
+    getLocationProfiles(token).then((d) => setLocations(d.profiles)).catch(() => {});
+  }, [token]);
 
-  const stopRecording = async () => {
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-    if (recordingRef.current) { await recordingRef.current.stopAndUnloadAsync(); recordingRef.current = null; }
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-    setIsRecording(false);
+  // Weather — fetch once on first GPS fix
+  const weatherFetched = useRef(false);
+  const fetchWeather = useCallback(async (lat: number, lon: number) => {
+    setWeatherLoading(true);
     try {
-      await createRecording(token, { duration_seconds: elapsedRef.current });
-      await loadDashboard();
+      const res = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m&timezone=auto`
+      );
+      const data = await res.json();
+      setWeather({ temp: data.current.temperature_2m, code: data.current.weathercode, windspeed: data.current.windspeed_10m });
     } catch {}
-    setElapsedSeconds(0);
-    elapsedRef.current = 0;
-  };
+    setWeatherLoading(false);
+  }, []);
 
-  const fmt = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-  };
-
-  const fmtDate = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  };
+  useEffect(() => {
+    if (!gps || weatherFetched.current) return;
+    weatherFetched.current = true;
+    fetchWeather(gps.latitude, gps.longitude);
+  }, [gps, fetchWeather]);
 
   if (!fontsLoaded) return null;
 
-  const activeClients = clients.filter(c => c.is_active).length;
-  const healthyClients = clients.filter(c => c.engagement_health === 'Good').length;
-  const healthPct = clients.length > 0 ? Math.round((healthyClients / clients.length) * 100) : 0;
+  // Derived state
+  const nearbyProfile = gps
+    ? locations.find((l) => {
+        if (!l.latitude || !l.longitude) return false;
+        return distMeters(gps.latitude, gps.longitude, l.latitude, l.longitude) < 300;
+      })
+    : undefined;
 
-  const healthColor: Record<string, string> = { Good: '#16A34A', Neutral: '#D97706', Risk: '#DC2626' };
+  const locStatus = nearbyProfile
+    ? { label: nearbyProfile.name, type: nearbyProfile.type as 'base' | 'client' }
+    : { label: 'In the Field', type: 'field' as const };
 
-  const kpis = [
-    { label: 'ENGAGEMENTS', value: activeClients.toString(), sub: 'Active Clients', badge: 'active', change: '+12.5%', up: true },
-    { label: 'RECORDINGS', value: recordings.length.toString(), sub: 'Total Captured', badge: 'total', change: '+8.3%', up: true },
-    { label: 'LOCATIONS', value: locations.length.toString(), sub: 'Sites Tracked', badge: 'tracked', change: '+5.2%', up: true },
-    { label: 'HEALTH', value: `${healthPct}%`, sub: 'Clients Good', badge: 'score', change: '-3.1%', up: false },
-  ];
+  const baseProfile = locations.find((l) => l.type === 'base');
+  const mapCenter =
+    gps ??
+    (baseProfile?.latitude && baseProfile?.longitude
+      ? { latitude: baseProfile.latitude, longitude: baseProfile.longitude }
+      : DEFAULT_CENTER);
 
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const firstName = user.name.split(' ')[0];
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  const topPadding = Platform.OS === 'ios' ? 54 : Platform.OS === 'android' ? 40 : 24;
+
+  // Avatar initials passed to the map marker
+  const avatarLabel = user.name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  const chipColors = {
+    base:   { bg: 'rgba(22,163,74,0.18)',  border: 'rgba(22,163,74,0.4)',  text: '#4ade80', icon: 'home' },
+    client: { bg: 'rgba(96,165,250,0.18)', border: 'rgba(96,165,250,0.4)', text: '#93c5fd', icon: 'business' },
+    field:  { bg: 'rgba(251,191,36,0.18)', border: 'rgba(251,191,36,0.4)', text: '#fcd34d', icon: 'navigate-circle' },
+  } as const;
+  const chip = chipColors[locStatus.type];
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {Platform.OS !== 'web' && (
-              <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
-                <Ionicons name="menu" size={24} color="#1a1a1a" />
-              </TouchableOpacity>
-            )}
-            <View>
-              <Text style={styles.greeting}>Hello, {firstName}!</Text>
-              <Text style={styles.subGreeting}>What are you looking for today?</Text>
-            </View>
-          </View>
-          <View style={styles.headerRight}>
-            <View style={styles.liveBadge}>
-              <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
-              <Text style={styles.liveText}>Active</Text>
-            </View>
+      {/* Full-screen 3D map — avatar bubble is rendered inside as a map marker */}
+      <View style={StyleSheet.absoluteFill}>
+        <MapViewComponent
+          latitude={mapCenter.latitude}
+          longitude={mapCenter.longitude}
+          tilt
+          avatarLabel={avatarLabel}
+          style={{ borderRadius: 0 }}
+        />
+      </View>
+
+      {/* Gradient overlay */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <LinearGradient
+          colors={[
+            'rgba(4,4,10,0.72)',
+            'rgba(4,4,10,0.18)',
+            'rgba(4,4,10,0.06)',
+            'rgba(4,4,10,0.78)',
+          ]}
+          locations={[0, 0.2, 0.55, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
+      {/* Top bar */}
+      <View style={[styles.topBar, { paddingTop: topPadding }]} pointerEvents="box-none">
+        <View style={styles.topBarLeft}>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity onPress={openDrawer} style={styles.hamburger}>
+              <Ionicons name="menu" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+          <View>
+            <Text style={styles.greeting}>{greeting}, {firstName}!</Text>
+            <Text style={styles.dateText}>{dateStr}</Text>
           </View>
         </View>
 
-        {/* KPI Cards */}
-        {loadingData ? (
-          <ActivityIndicator color="#3d7b5f" style={{ marginTop: 32 }} />
-        ) : (
-          <View style={styles.kpiRow}>
-            {kpis.map((kpi) => (
-              <View key={kpi.label} style={styles.kpiCard}>
-                <LinearGradient colors={['#3d7b5f', '#4a9d7a']} style={StyleSheet.absoluteFill} />
-                <View style={styles.kpiTop}>
-                  <Text style={styles.kpiLabel}>{kpi.label}</Text>
-                  <View style={styles.kpiBadge}>
-                    <Text style={styles.kpiBadgeText}>{kpi.badge}</Text>
-                  </View>
-                </View>
-                <Text style={styles.kpiValue}>{kpi.value}</Text>
-                <View style={styles.kpiBottom}>
-                  <Text style={styles.kpiSub}>{kpi.sub}</Text>
-                  <Text style={[styles.kpiChange, !kpi.up && styles.kpiChangeDown]}>
-                    {kpi.up ? '▲' : '▼'} {kpi.change}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+        <View style={[styles.gpsBadge, gpsStatus === 'denied' && styles.gpsBadgeDenied]}>
+          <Animated.View
+            style={[
+              styles.gpsDot,
+              gpsStatus === 'denied' && styles.gpsDotDenied,
+              { opacity: pulseAnim },
+            ]}
+          />
+          <Text style={[styles.gpsBadgeText, gpsStatus === 'denied' && styles.gpsBadgeTextDenied]}>
+            {gpsStatus === 'live' ? 'Live' : gpsStatus === 'loading' ? '...' : 'GPS Off'}
+          </Text>
+        </View>
+      </View>
 
-        {/* Two Column Layout */}
-        {!loadingData && (
-          <View style={styles.columnsRow}>
-            {/* Recent Engagements */}
-            <View style={[styles.sectionCard, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.sectionTitle}>Recent Engagements</Text>
-              {clients.length === 0 ? (
-                <Text style={styles.emptyText}>No engagements yet</Text>
-              ) : (
-                <View style={styles.table}>
-                  <View style={styles.tableHeader}>
-                    <Text style={[styles.tableHeaderText, { flex: 2 }]}>Client</Text>
-                    <Text style={[styles.tableHeaderText, { flex: 1 }]}>Code</Text>
-                    <Text style={[styles.tableHeaderText, { flex: 1 }]}>Health</Text>
-                    <Text style={[styles.tableHeaderText, { flex: 1 }]}>Tier</Text>
-                  </View>
-                  {clients.slice(0, 6).map((c) => (
-                    <View key={c.id} style={styles.tableRow}>
-                      <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={[styles.healthDot, { backgroundColor: healthColor[c.engagement_health] || '#D97706' }]} />
-                        <Text style={styles.tableCell} numberOfLines={1}>{c.client_name}</Text>
-                      </View>
-                      <Text style={[styles.tableCellLight, { flex: 1 }]}>{c.client_code}</Text>
-                      <Text style={[styles.tableCell, { flex: 1, color: healthColor[c.engagement_health] || '#D97706' }]}>
-                        {c.engagement_health}
-                      </Text>
-                      <View style={{ flex: 1 }}>
-                        <View style={styles.tierPill}>
-                          <Text style={styles.tierPillText}>{c.client_tier}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
+      {/* Bottom panel */}
+      <View style={styles.bottomPanel}>
+        {/* Location chip */}
+        <View style={[styles.locationChip, { backgroundColor: chip.bg, borderColor: chip.border }]}>
+          <Ionicons name={chip.icon as any} size={15} color={chip.text} />
+          <Text style={[styles.locationChipLabel, { color: chip.text }]}>{locStatus.label}</Text>
+          {gps && (
+            <Text style={styles.coordsText} numberOfLines={1}>
+              {gps.latitude.toFixed(4)}, {gps.longitude.toFixed(4)}
+            </Text>
+          )}
+        </View>
 
-            {/* Recent Recordings */}
-            <View style={[styles.sectionCard, { flex: 1, marginLeft: 8 }]}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Recent Recordings</Text>
-                <TouchableOpacity
-                  style={[styles.recButton, isRecording && styles.recButtonActive]}
-                  onPress={isRecording ? stopRecording : startRecording}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name={isRecording ? 'stop' : 'mic'} size={14} color="#FFFFFF" />
-                  <Text style={styles.recButtonText}>
-                    {isRecording ? `Stop ${fmt(elapsedSeconds)}` : 'Record'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {recordings.length === 0 ? (
-                <Text style={styles.emptyText}>No recordings yet</Text>
-              ) : (
-                recordings.slice(0, 6).map((r) => (
-                  <TouchableOpacity
-                    key={r.id}
-                    style={styles.recRow}
-                    onPress={() => stackNav.navigate('RecordingDetail', { recordingId: r.id })}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.recIcon}>
-                      <Ionicons name="mic" size={14} color="#3d7b5f" />
-                    </View>
-                    <View style={styles.recMeta}>
-                      <Text style={styles.recTitle}>Recording · {fmt(r.duration_seconds || 0)}</Text>
-                      <Text style={styles.recDate}>{fmtDate(r.created_at)}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
+        {/* Cards row */}
+        <View style={styles.cardsRow}>
+          <View style={styles.card}>
+            <Ionicons name="checkbox-outline" size={22} color="rgba(255,255,255,0.75)" />
+            <Text style={styles.cardValue}>0</Text>
+            <Text style={styles.cardLabel}>Tasks Today</Text>
           </View>
-        )}
 
-        {/* Location Summary */}
-        {!loadingData && locations.length > 0 && (
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Location Profiles</Text>
-            <View style={styles.locGrid}>
-              {locations.slice(0, 4).map((loc) => (
-                <View key={loc.id} style={styles.locChip}>
-                  <View style={[styles.locTypeDot, loc.type === 'base' ? styles.locBase : styles.locClient]} />
-                  <Text style={styles.locName} numberOfLines={1}>{loc.name}</Text>
-                  <Text style={styles.locType}>{loc.type === 'base' ? 'Base' : 'Client'}</Text>
+          <View style={styles.cardDivider} />
+
+          <View style={[styles.card, styles.cardWide]}>
+            {weatherLoading ? (
+              <ActivityIndicator color="rgba(255,255,255,0.45)" size="small" />
+            ) : weather ? (
+              <>
+                <View style={styles.weatherTop}>
+                  <Ionicons name={weatherIcon(weather.code) as any} size={26} color="#FFFFFF" />
+                  <Text style={styles.weatherTemp}>{Math.round(weather.temp)}°C</Text>
                 </View>
-              ))}
-            </View>
+                <Text style={styles.cardLabel}>{weatherLabel(weather.code)}</Text>
+                <View style={styles.weatherWindRow}>
+                  <Ionicons name="water-outline" size={11} color="rgba(255,255,255,0.45)" />
+                  <Text style={styles.weatherWind}>{Math.round(weather.windspeed)} km/h</Text>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.cardLabelMuted}>Weather unavailable</Text>
+            )}
           </View>
-        )}
-      </ScrollView>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f0',
+  container: { flex: 1, backgroundColor: '#05050a' },
+
+  topBar: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    paddingHorizontal: 22, paddingBottom: 16, zIndex: 10,
   },
-  scroll: { flex: 1 },
-  scrollContent: {
-    padding: 24,
-    paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
-    paddingBottom: 40,
+  topBarLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  hamburger: { padding: 4, marginTop: 2 },
+  greeting: { fontSize: 24, fontFamily: 'Oswald_700Bold', color: '#FFFFFF', letterSpacing: 0.3 },
+  dateText: { fontSize: 13, fontFamily: 'Oswald_400Regular', color: 'rgba(255,255,255,0.5)', marginTop: 2 },
+
+  gpsBadge: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: 'rgba(22,163,74,0.18)', borderWidth: 1, borderColor: 'rgba(22,163,74,0.35)',
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, gap: 7,
+  },
+  gpsBadgeDenied: { backgroundColor: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.3)' },
+  gpsDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#4ade80' },
+  gpsDotDenied: { backgroundColor: '#f87171' },
+  gpsBadgeText: { fontSize: 12, fontFamily: 'Oswald_500Medium', color: '#4ade80' },
+  gpsBadgeTextDenied: { color: '#f87171' },
+
+  bottomPanel: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(8,7,6,0.82)',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.09)',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 20, paddingTop: 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+    gap: 14,
+    // @ts-ignore web-only
+    backdropFilter: 'blur(20px)',
   },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
+  locationChip: {
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
+    borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9, gap: 8,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  hamburger: {
-    padding: 4,
-    marginTop: 2,
-  },
-  greeting: {
-    fontSize: 28,
-    fontFamily: 'Oswald_700Bold',
-    color: '#1a1a1a',
-  },
-  subGreeting: {
-    fontSize: 14,
-    fontFamily: 'Oswald_400Regular',
-    color: '#4a5568',
-    marginTop: 4,
-  },
-  headerRight: {
-    alignItems: 'flex-end',
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(61,123,95,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(61,123,95,0.25)',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#3d7b5f',
-    marginRight: 8,
-  },
-  liveText: {
-    fontSize: 12,
-    fontFamily: 'Oswald_500Medium',
-    color: '#3d7b5f',
-  },
+  locationChipLabel: { fontSize: 14, fontFamily: 'Oswald_600SemiBold' },
+  coordsText: { fontSize: 11, fontFamily: 'Oswald_400Regular', color: 'rgba(255,255,255,0.3)', marginLeft: 4 },
 
-  // KPI Cards
-  kpiRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+  cardsRow: { flexDirection: 'row', gap: 12 },
+  card: {
+    flex: 1, backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 18, padding: 16, gap: 4,
   },
-  kpiCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 16,
-    overflow: 'hidden',
-    minHeight: 120,
-    justifyContent: 'space-between',
-  },
-  kpiTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  kpiLabel: {
-    fontSize: 11,
-    fontFamily: 'Oswald_600SemiBold',
-    color: 'rgba(255,255,255,0.7)',
-    letterSpacing: 1,
-  },
-  kpiBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  kpiBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Oswald_500Medium',
-    color: '#FFFFFF',
-  },
-  kpiValue: {
-    fontSize: 32,
-    fontFamily: 'Oswald_700Bold',
-    color: '#FFFFFF',
-  },
-  kpiBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  kpiSub: {
-    fontSize: 11,
-    fontFamily: 'Oswald_400Regular',
-    color: 'rgba(255,255,255,0.6)',
-  },
-  kpiChange: {
-    fontSize: 11,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#BBF7D0',
-  },
-  kpiChangeDown: {
-    color: '#FECACA',
-  },
+  cardWide: { flex: 2 },
+  cardDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 4 },
+  cardValue: { fontSize: 32, fontFamily: 'Oswald_700Bold', color: '#FFFFFF', marginTop: 4 },
+  cardLabel: { fontSize: 12, fontFamily: 'Oswald_400Regular', color: 'rgba(255,255,255,0.45)' },
+  cardLabelMuted: { fontSize: 12, fontFamily: 'Oswald_400Regular', color: 'rgba(255,255,255,0.3)', marginTop: 4 },
 
-  // Section Cards
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 20,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: 'Oswald_700Bold',
-    color: '#1a1a1a',
-    marginBottom: 16,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 13,
-    fontFamily: 'Oswald_400Regular',
-    color: '#9ca3af',
-    textAlign: 'center',
-    paddingVertical: 16,
-  },
-
-  // Columns
-  columnsRow: {
-    flexDirection: 'row',
-    marginBottom: 0,
-  },
-
-  // Table
-  table: {},
-  tableHeader: {
-    flexDirection: 'row',
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    marginBottom: 4,
-  },
-  tableHeaderText: {
-    fontSize: 11,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f0',
-  },
-  tableCell: {
-    fontSize: 13,
-    fontFamily: 'Oswald_500Medium',
-    color: '#1a1a1a',
-  },
-  tableCellLight: {
-    fontSize: 13,
-    fontFamily: 'Oswald_400Regular',
-    color: '#4a5568',
-  },
-  healthDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  tierPill: {
-    backgroundColor: 'rgba(61,123,95,0.1)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    alignSelf: 'flex-start',
-  },
-  tierPillText: {
-    fontSize: 10,
-    fontFamily: 'Oswald_500Medium',
-    color: '#3d7b5f',
-  },
-
-  // Record Button
-  recButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#3d7b5f',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 6,
-  },
-  recButtonActive: {
-    backgroundColor: '#DC2626',
-  },
-  recButtonText: {
-    fontSize: 12,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#FFFFFF',
-  },
-
-  // Recording Rows
-  recRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f0',
-  },
-  recIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(61,123,95,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  recMeta: { flex: 1 },
-  recTitle: {
-    fontSize: 13,
-    fontFamily: 'Oswald_500Medium',
-    color: '#1a1a1a',
-  },
-  recDate: {
-    fontSize: 11,
-    fontFamily: 'Oswald_400Regular',
-    color: '#9ca3af',
-    marginTop: 2,
-  },
-
-  // Location chips
-  locGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  locChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  locTypeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  locBase: { backgroundColor: '#3d7b5f' },
-  locClient: { backgroundColor: '#16A34A' },
-  locName: {
-    fontSize: 13,
-    fontFamily: 'Oswald_500Medium',
-    color: '#1a1a1a',
-  },
-  locType: {
-    fontSize: 10,
-    fontFamily: 'Oswald_400Regular',
-    color: '#9ca3af',
-  },
+  weatherTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 2 },
+  weatherTemp: { fontSize: 32, fontFamily: 'Oswald_700Bold', color: '#FFFFFF' },
+  weatherWindRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  weatherWind: { fontSize: 11, fontFamily: 'Oswald_400Regular', color: 'rgba(255,255,255,0.4)' },
 });
