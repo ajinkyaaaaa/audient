@@ -5,6 +5,7 @@ export type DrawerParamList = {
   Tasks: undefined;
   Sentry: undefined;
   Config: undefined;
+  Settings: undefined;
 };
 
 export type HomeStackParamList = {

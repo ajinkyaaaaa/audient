@@ -10,6 +10,7 @@ import EngagementsNavigator from './EngagementsNavigator';
 import TasksScreen from '../screens/TasksScreen';
 import SentryNavigator from './SentryNavigator';
 import ConfigScreen from '../screens/ConfigScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import { OrgConfig } from '../services/api';
 
 type User = {
@@ -66,6 +67,9 @@ export default function AppNavigator({ user, token, onLogout, orgConfig }: Props
               {() => <SentryNavigator token={token} currentUserId={user.id} userName={user.name} />}
             </Drawer.Screen>
           )}
+          <Drawer.Screen name="Settings">
+            {() => <SettingsScreen user={user} />}
+          </Drawer.Screen>
           {user.role === 'admin' && (
             <Drawer.Screen name="Config">
               {() => <ConfigScreen token={token} />}

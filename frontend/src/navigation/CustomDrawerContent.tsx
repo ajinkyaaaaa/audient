@@ -21,7 +21,6 @@ const baseMenuItems = [
 
 const adminMenuItems = [
   { label: 'Sentry', route: 'Sentry', icon: 'eye' as const },
-  { label: 'Config', route: 'Config', icon: 'settings' as const },
 ];
 
 export default function CustomDrawerContent({ user, onLogout, state, navigation }: Props) {
@@ -70,8 +69,18 @@ export default function CustomDrawerContent({ user, onLogout, state, navigation 
           })}
         </View>
 
-        {/* Bottom section - Logout */}
+        {/* Bottom section - Settings + Logout */}
         <View style={styles.bottomSection}>
+          <TouchableOpacity
+            style={[styles.navItem, state.routes[state.index]?.name === 'Settings' && styles.navItemActive]}
+            onPress={() => navigation.navigate('Settings')}
+          >
+            <Ionicons
+              name={state.routes[state.index]?.name === 'Settings' ? 'settings' : 'settings-outline'}
+              size={22}
+              color={state.routes[state.index]?.name === 'Settings' ? '#FFFFFF' : 'rgba(255,255,255,0.6)'}
+            />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.navItem} onPress={onLogout}>
             <Ionicons name="log-out-outline" size={22} color="rgba(255,255,255,0.6)" />
           </TouchableOpacity>
@@ -122,8 +131,26 @@ export default function CustomDrawerContent({ user, onLogout, state, navigation 
         })}
       </View>
 
-      {/* Bottom section - Logout */}
+      {/* Bottom section - Settings + Logout */}
       <View style={styles.mobileBottomSection}>
+        {(() => {
+          const isActive = state.routes[state.index]?.name === 'Settings';
+          return (
+            <TouchableOpacity
+              style={[styles.mobileNavItem, isActive && styles.mobileNavItemActive]}
+              onPress={() => navigation.navigate('Settings')}
+            >
+              <Ionicons
+                name={isActive ? 'settings' : 'settings-outline'}
+                size={22}
+                color={isActive ? '#FFFFFF' : 'rgba(255,255,255,0.6)'}
+              />
+              <Text style={[styles.mobileNavLabel, isActive && styles.mobileNavLabelActive]}>
+                Settings
+              </Text>
+            </TouchableOpacity>
+          );
+        })()}
         <TouchableOpacity style={styles.mobileNavItem} onPress={onLogout}>
           <Ionicons name="log-out-outline" size={22} color="rgba(255,255,255,0.6)" />
           <Text style={styles.mobileNavLabel}>Logout</Text>
@@ -174,6 +201,7 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     paddingBottom: 24,
+    gap: 4,
   },
 
   // Mobile full-panel styles
