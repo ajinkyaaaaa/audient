@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeStackParamList } from './types';
 import HomeScreen from '../screens/HomeScreen';
 import RecordingDetailScreen from '../screens/RecordingDetailScreen';
+import VisitDetailScreen from '../screens/VisitDetailScreen';
 
 type User = {
   id: number;
@@ -33,6 +34,17 @@ export default function HomeNavigator({ user, token, onLogout }: Props) {
           <RecordingDetailScreen
             token={token}
             recordingId={props.route.params.recordingId}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen
+        name="VisitDetail"
+        options={{ animation: 'slide_from_right' }}
+      >
+        {(props) => (
+          <VisitDetailScreen
+            visitId={props.route.params.visitId}
+            clientName={props.route.params.clientName}
           />
         )}
       </Stack.Screen>

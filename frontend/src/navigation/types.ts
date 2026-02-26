@@ -11,6 +11,7 @@ export type DrawerParamList = {
 export type HomeStackParamList = {
   HomeMain: undefined;
   RecordingDetail: { recordingId: number };
+  VisitDetail: { visitId: string; clientName: string };
 };
 
 export type EngagementsStackParamList = {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 
@@ -9,6 +9,8 @@ type Props = {
   tilt?: boolean;
   avatarLabel?: string;
   style?: object;
+  showWeather?: boolean;
+  recenterKey?: number;
 };
 
 function MapUpdater({ latitude, longitude }: { latitude: number; longitude: number }) {
@@ -103,71 +105,76 @@ function AvatarMarker({
   const map = useMap();
 
   useEffect(() => {
-    // Container: 120px wide, 120px tall + 10px tail = 130px total
-    // Avatar centre sits at (60, 60) inside the container.
-    // Three rings all start at 54px and expand to ~113px (scale 2.1), fitting in 120px.
-    // iconAnchor [60, 130] = tip of the tail sits exactly on the coordinate.
+    // Layout (all measurements in px):
+    //   Container  : 80 wide × 68 tall
+    //   Avatar (44px): top:0, left:18  → center (40, 22), bottom at y=44
+    //   Gap          : 4px             → dot top at y=48
+    //   Dot (12px)   : top:48, left:34 → center (40, 54)
+    //   Rings (40px) : centered at dot (40, 54) → top:34, left:20
+    //   iconAnchor   : [40, 54]        → dot center = map coordinate ✓
     const avatarIcon = (window as any).L.divIcon({
       className: '',
       html: `
         <div style="
-          width:120px;height:130px;
+          width:80px;height:68px;
           position:relative;
+          overflow:visible;
         ">
-          <!-- Radiating wave ring 1 (delay 0s) -->
+          <!-- Avatar circle floating above dot -->
           <div style="
-            position:absolute;top:33px;left:33px;
-            width:54px;height:54px;border-radius:50%;
-            border:1.5px solid rgba(34,197,94,0.6);
-            animation:radar-wave 1.8s ease-out infinite 0s;
-          "></div>
-
-          <!-- Radiating wave ring 2 (delay 0.6s) -->
-          <div style="
-            position:absolute;top:33px;left:33px;
-            width:54px;height:54px;border-radius:50%;
-            border:1.5px solid rgba(34,197,94,0.6);
-            animation:radar-wave 1.8s ease-out infinite 0.6s;
-          "></div>
-
-          <!-- Radiating wave ring 3 (delay 1.2s) -->
-          <div style="
-            position:absolute;top:33px;left:33px;
-            width:54px;height:54px;border-radius:50%;
-            border:1.5px solid rgba(34,197,94,0.6);
-            animation:radar-wave 1.8s ease-out infinite 1.2s;
-          "></div>
-
-          <!-- Avatar circle -->
-          <div style="
-            position:absolute;top:37px;left:37px;
-            width:46px;height:46px;border-radius:50%;
+            position:absolute;top:0;left:18px;
+            width:44px;height:44px;border-radius:50%;
             background:#2d4a3e;
             border:3px solid #ffffff;
             display:flex;align-items:center;justify-content:center;
-            box-shadow:0 4px 18px rgba(0,0,0,0.55);
+            box-shadow:0 4px 14px rgba(0,0,0,0.45);
             z-index:4;
             color:#ffffff;
-            font-size:16px;font-weight:700;
+            font-size:15px;font-weight:700;
             font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
             letter-spacing:0.5px;
           ">${label}</div>
 
-          <!-- Downward triangle tail -->
+          <!-- Radiating wave ring 1 (delay 0s) -->
           <div style="
-            position:absolute;bottom:0;left:50%;
-            margin-left:-7px;
-            width:0;height:0;
-            border-left:7px solid transparent;
-            border-right:7px solid transparent;
-            border-top:10px solid #22c55e;
-            z-index:5;
-            filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+            position:absolute;top:34px;left:20px;
+            width:40px;height:40px;border-radius:50%;
+            border:1.5px solid rgba(34,197,94,0.7);
+            animation:radar-wave 2s ease-out infinite 0s;
+            z-index:1;
+          "></div>
+
+          <!-- Radiating wave ring 2 (delay 0.65s) -->
+          <div style="
+            position:absolute;top:34px;left:20px;
+            width:40px;height:40px;border-radius:50%;
+            border:1.5px solid rgba(34,197,94,0.7);
+            animation:radar-wave 2s ease-out infinite 0.65s;
+            z-index:1;
+          "></div>
+
+          <!-- Radiating wave ring 3 (delay 1.3s) -->
+          <div style="
+            position:absolute;top:34px;left:20px;
+            width:40px;height:40px;border-radius:50%;
+            border:1.5px solid rgba(34,197,94,0.7);
+            animation:radar-wave 2s ease-out infinite 1.3s;
+            z-index:1;
+          "></div>
+
+          <!-- Green dot at map coordinate -->
+          <div style="
+            position:absolute;top:48px;left:34px;
+            width:12px;height:12px;border-radius:50%;
+            background:#22c55e;
+            border:2.5px solid #ffffff;
+            box-shadow:0 0 8px rgba(34,197,94,0.9);
+            z-index:3;
           "></div>
         </div>
       `,
-      iconSize: [120, 130],
-      iconAnchor: [60, 130],
+      iconSize: [80, 68],
+      iconAnchor: [40, 54],
     });
 
     const marker = (window as any).L.marker([latitude, longitude], { icon: avatarIcon }).addTo(map);
@@ -177,7 +184,46 @@ function AvatarMarker({
   return null;
 }
 
-export default function MapView({ latitude, longitude, grayscale, tilt, avatarLabel, style }: Props) {
+function WeatherLayer() {
+  const [radarUrl, setRadarUrl] = useState<string | null>(null);
+  const [satelliteUrl, setSatelliteUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('https://api.rainviewer.com/public/weather-maps.json')
+      .then(r => r.json())
+      .then(data => {
+        if (data.radar?.past?.length) {
+          const path = data.radar.past[data.radar.past.length - 1].path;
+          setRadarUrl(`https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/2/1_1.png`);
+        }
+        if (data.satellite?.infrared?.length) {
+          const satPath = data.satellite.infrared[data.satellite.infrared.length - 1].path;
+          setSatelliteUrl(`https://tilecache.rainviewer.com${satPath}/256/{z}/{x}/{y}/0/0_0.png`);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <>
+      {satelliteUrl && <TileLayer url={satelliteUrl} opacity={0.4} />}
+      {radarUrl && <TileLayer url={radarUrl} opacity={0.7} />}
+    </>
+  );
+}
+
+function MapRecenterer({ latitude, longitude, recenterKey }: { latitude: number; longitude: number; recenterKey: number }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!recenterKey) return;
+    map.flyTo([latitude, longitude], 17);
+  }, [recenterKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+}
+
+export default function MapView({ latitude, longitude, grayscale, tilt, avatarLabel, style, showWeather, recenterKey = 0 }: Props) {
   useEffect(() => {
     const cssId = 'leaflet-css';
     if (!document.getElementById(cssId)) {
@@ -260,7 +306,10 @@ export default function MapView({ latitude, longitude, grayscale, tilt, avatarLa
           keyboard={!tilt}
         >
           <TileLayer url={tileUrl} />
-          <MapUpdater latitude={latitude} longitude={longitude} />
+          {/* Only auto-follow GPS in normal (Geo-Sense) mode; tilt uses re-center button */}
+          {!tilt && <MapUpdater latitude={latitude} longitude={longitude} />}
+          {showWeather && <WeatherLayer />}
+          <MapRecenterer latitude={latitude} longitude={longitude} recenterKey={recenterKey} />
           {!grayscale && (
             avatarLabel
               ? <AvatarMarker latitude={latitude} longitude={longitude} label={avatarLabel} />
