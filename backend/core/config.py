@@ -1,7 +1,9 @@
+from typing import Optional
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    DATABASE_URL: Optional[str] = None  # Provided by Railway Postgres
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
     DB_USER: str = "postgres"

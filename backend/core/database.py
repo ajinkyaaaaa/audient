@@ -6,13 +6,16 @@ pool: asyncpg.Pool | None = None
 
 async def init_db():
     global pool
-    pool = await asyncpg.create_pool(
-        host=settings.DB_HOST,
-        port=settings.DB_PORT,
-        user=settings.DB_USER,
-        password=settings.DB_PASSWORD,
-        database=settings.DB_NAME,
-    )
+    if settings.DATABASE_URL:
+        pool = await asyncpg.create_pool(dsn=settings.DATABASE_URL)
+    else:
+        pool = await asyncpg.create_pool(
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+            database=settings.DB_NAME,
+        )
     async with pool.acquire() as conn:
         # Organizations table
         await conn.execute("""
@@ -139,6 +142,13 @@ async def init_db():
         # Migrate: org location sync interval (seconds)
         await conn.execute("""
             ALTER TABLE organizations ADD COLUMN IF NOT EXISTS location_sync_interval INTEGER DEFAULT 5;
+        """)
+        # Migrate: client office GPS coordinates
+        await conn.execute("""
+            ALTER TABLE clients ADD COLUMN IF NOT EXISTS office_latitude DOUBLE PRECISION;
+        """)
+        await conn.execute("""
+            ALTER TABLE clients ADD COLUMN IF NOT EXISTS office_longitude DOUBLE PRECISION;
         """)
     print("Database initialized — tables ready")
 

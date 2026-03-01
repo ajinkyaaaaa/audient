@@ -44,7 +44,12 @@ export default function HomeNavigator({ user, token, onLogout }: Props) {
         {(props) => (
           <VisitDetailScreen
             visitId={props.route.params.visitId}
+            clientCode={props.route.params.clientCode}
             clientName={props.route.params.clientName}
+            time={props.route.params.time}
+            location={props.route.params.location}
+            status={props.route.params.status}
+            type={props.route.params.type}
           />
         )}
       </Stack.Screen>

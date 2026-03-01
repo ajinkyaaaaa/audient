@@ -175,6 +175,8 @@ export type Client = {
   client_tier: 'Strategic' | 'Normal' | 'Low Touch';
   engagement_health: 'Good' | 'Neutral' | 'Risk';
   is_active: boolean;
+  office_latitude: number | null;
+  office_longitude: number | null;
   created_at: string;
   updated_at: string;
   creator_name?: string | null;
@@ -208,6 +210,8 @@ export async function createClient(
     primary_office_location?: string;
     website_domain?: string;
     client_tier?: string;
+    office_latitude?: number;
+    office_longitude?: number;
   }
 ): Promise<{ client: Client }> {
   return request<{ client: Client }>('/clients', {

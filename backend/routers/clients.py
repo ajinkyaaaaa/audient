@@ -60,6 +60,8 @@ def _client_dict(row) -> dict:
         "client_tier": row["client_tier"],
         "engagement_health": row["engagement_health"],
         "is_active": row["is_active"],
+        "office_latitude": row["office_latitude"],
+        "office_longitude": row["office_longitude"],
         "created_at": row["created_at"].isoformat(),
         "updated_at": row["updated_at"].isoformat(),
     }
@@ -127,8 +129,9 @@ async def create_client(request: Request):
     row = await pool.fetchrow(
         """INSERT INTO clients (
             user_id, client_name, client_code, industry_sector, company_size,
-            headquarters_location, primary_office_location, website_domain, client_tier
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            headquarters_location, primary_office_location, website_domain, client_tier,
+            office_latitude, office_longitude
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *""",
         user_id,
         client_name,
@@ -139,6 +142,8 @@ async def create_client(request: Request):
         body.get("primary_office_location"),
         body.get("website_domain"),
         body.get("client_tier", "Normal"),
+        body.get("office_latitude"),
+        body.get("office_longitude"),
     )
 
     return JSONResponse(status_code=201, content={"client": _client_dict(row)})
@@ -206,6 +211,7 @@ async def update_client(client_id: int, request: Request):
         "client_name", "industry_sector", "company_size",
         "headquarters_location", "primary_office_location",
         "website_domain", "client_tier", "engagement_health", "is_active",
+        "office_latitude", "office_longitude",
     ]
     sets = []
     vals = []

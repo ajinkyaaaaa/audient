@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   useFonts,
@@ -76,9 +76,11 @@ export default function EngagementsScreen({ token }: Props) {
     }
   }, [token]);
 
-  useEffect(() => {
-    loadClients();
-  }, [loadClients]);
+  useFocusEffect(
+    useCallback(() => {
+      loadClients();
+    }, [loadClients])
+  );
 
   // Load master clients once when form first opens
   useEffect(() => {
@@ -236,7 +238,7 @@ export default function EngagementsScreen({ token }: Props) {
       {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => { resetForm(); setShowForm(true); }}
+        onPress={() => stackNav.navigate('CreateEngagement')}
         activeOpacity={0.8}
       >
         <LinearGradient colors={['#3d7b5f', '#4a9d7a']} style={styles.fabGradient}>

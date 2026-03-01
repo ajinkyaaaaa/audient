@@ -36,7 +36,7 @@ type Visit = {
   clientName: string;
   location: string;
   time: string;
-  status: 'upcoming' | 'in-progress' | 'completed';
+  status: 'upcoming' | 'in-progress' | 'completed' | 'cancelled' | 'postponed';
   type: 'assigned' | 'self';
   stakeholdersAdded: boolean;
 };
@@ -349,7 +349,12 @@ export default function HomeScreen({ user }: HomeScreenProps) {
             visit={visit}
             onPress={() => navigation.navigate('VisitDetail', {
               visitId: visit.id,
+              clientCode: visit.clientCode,
               clientName: visit.clientName,
+              time: visit.time,
+              location: visit.location,
+              status: visit.status,
+              type: visit.type,
             })}
           />
         ))}

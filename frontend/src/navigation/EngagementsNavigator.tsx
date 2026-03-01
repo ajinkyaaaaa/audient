@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { EngagementsStackParamList } from './types';
 import EngagementsScreen from '../screens/EngagementsScreen';
 import ClientDetailScreen from '../screens/ClientDetailScreen';
+import CreateEngagementScreen from '../screens/CreateEngagementScreen';
 
 type Props = {
   token: string;
@@ -26,6 +27,12 @@ export default function EngagementsNavigator({ token }: Props) {
             clientId={props.route.params.clientId}
           />
         )}
+      </Stack.Screen>
+      <Stack.Screen
+        name="CreateEngagement"
+        options={{ animation: 'slide_from_bottom' }}
+      >
+        {() => <CreateEngagementScreen token={token} />}
       </Stack.Screen>
     </Stack.Navigator>
   );

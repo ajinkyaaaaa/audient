@@ -89,7 +89,7 @@ export default function SettingsScreen({ user }: SettingsScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f0',
+    backgroundColor: '#F5F4EF',
   },
   scroll: { flex: 1 },
   scrollContent: {
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     fontFamily: 'Oswald_400Regular',
-    color: '#4a5568',
+    color: '#6B5540',
     marginTop: 4,
     marginLeft: 34,
   },

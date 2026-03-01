@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,13 @@ import {
   ScrollView,
   Modal,
   TextInput,
+  Linking,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import {
   useFonts,
   Oswald_400Regular,
@@ -28,16 +31,366 @@ import {
   Client,
   Stakeholder,
 } from '../services/api';
+import ClientLocationMap from '../components/ClientLocationMap';
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const HEALTH_COLOR: Record<string, string> = {
+  Good: '#22C55E',
+  Neutral: '#F59E0B',
+  Risk: '#EF4444',
+};
+
+const HEALTH_PROGRESS: Record<string, number> = {
+  Good: 1.0,
+  Neutral: 0.5,
+  Risk: 0.25,
+};
+
+const TIER_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
+  Strategic: { bg: 'rgba(192,88,0,0.1)', text: '#C05800', border: 'rgba(192,88,0,0.28)' },
+  Normal:    { bg: '#F5F4EF',             text: '#6B5540', border: '#E8DCC0' },
+  'Low Touch': { bg: '#FAFAF8',           text: '#A89070', border: '#EDE8DF' },
+};
+
+const MONOSPACE_FONT = Platform.select({
+  ios: 'Courier New',
+  android: 'monospace',
+  default: 'monospace',
+});
+
+// ── Utility functions ──────────────────────────────────────────────────────────
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(km: number): string {
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  if (km < 10) return `${km.toFixed(1)} km`;
+  return `${Math.round(km)} km`;
+}
+
+function driveMinutes(km: number): number {
+  return Math.max(1, Math.ceil((km / 30) * 60));
+}
+
+function formatDriveTime(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function estimateLocalTime(longitude: number): string {
+  const offsetHours = Math.round(longitude / 15);
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const localDate = new Date(utcMs + offsetHours * 3600000);
+  return localDate.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+function openGoogleMaps(lat: number, lng: number, label: string) {
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${encodeURIComponent(label)}`;
+  Linking.openURL(url).catch(() => {});
+}
+
+function openAppleMaps(lat: number, lng: number, label: string) {
+  const url = `maps://maps.apple.com/?ll=${lat},${lng}&q=${encodeURIComponent(label)}`;
+  Linking.openURL(url).catch(() => openGoogleMaps(lat, lng, label));
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function PulsingDot({ color }: { color: string }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.8, duration: 850, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 850, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <View style={{ width: 18, height: 18, justifyContent: 'center', alignItems: 'center' }}>
+      <Animated.View
+        style={{
+          position: 'absolute',
+          width: 18,
+          height: 18,
+          borderRadius: 9,
+          backgroundColor: color,
+          opacity: 0.22,
+          transform: [{ scale: pulse }],
+        }}
+      />
+      <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: color }} />
+    </View>
+  );
+}
+
+// Circular progress gauge — half-circle clip technique (no SVG required)
+function EngagementRing({ health }: { health: string }) {
+  const SIZE = 96;
+  const THICKNESS = 9;
+  const center = SIZE / 2;
+
+  const color = HEALTH_COLOR[health] || '#F59E0B';
+  const progress = HEALTH_PROGRESS[health] || 0.5;
+  const label = Math.round(progress * 100).toString();
+
+  // Right half covers 0→180° (progress 0→50%)
+  const rightDeg = Math.min(progress * 360, 180) - 180;
+  // Left half covers 180→360° (progress 50→100%)
+  const leftDeg = progress > 0.5 ? (progress - 0.5) * 360 - 180 : -180;
+
+  return (
+    <View style={{ width: SIZE, height: SIZE }}>
+      {/* Gray background ring */}
+      <View
+        style={{
+          position: 'absolute',
+          width: SIZE,
+          height: SIZE,
+          borderRadius: center,
+          borderWidth: THICKNESS,
+          borderColor: '#E8DCC0',
+        }}
+      />
+
+      {/* Right half fill — clip to right side, rotate colored top-right arc */}
+      <View
+        style={{
+          position: 'absolute',
+          left: center,
+          top: 0,
+          width: center,
+          height: SIZE,
+          overflow: 'hidden',
+        }}
+      >
+        <View
+          style={{
+            position: 'absolute',
+            left: -center,
+            top: 0,
+            width: SIZE,
+            height: SIZE,
+            borderRadius: center,
+            borderWidth: THICKNESS,
+            borderTopColor: color,
+            borderRightColor: color,
+            borderBottomColor: 'transparent',
+            borderLeftColor: 'transparent',
+            transform: [{ rotate: `${rightDeg}deg` }],
+          }}
+        />
+      </View>
+
+      {/* Left half fill — only rendered when progress > 50% */}
+      {progress > 0.5 && (
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: center,
+            height: SIZE,
+            overflow: 'hidden',
+          }}
+        >
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: SIZE,
+              height: SIZE,
+              borderRadius: center,
+              borderWidth: THICKNESS,
+              borderTopColor: 'transparent',
+              borderRightColor: 'transparent',
+              borderBottomColor: color,
+              borderLeftColor: color,
+              transform: [{ rotate: `${leftDeg}deg` }],
+            }}
+          />
+        </View>
+      )}
+
+      {/* Inner circle */}
+      <View
+        style={{
+          position: 'absolute',
+          top: THICKNESS,
+          left: THICKNESS,
+          right: THICKNESS,
+          bottom: THICKNESS,
+          borderRadius: center - THICKNESS,
+          backgroundColor: '#FDFBD4',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ fontSize: 22, fontFamily: 'Oswald_700Bold', color, lineHeight: 26 }}>
+          {label}
+        </Text>
+        <Text style={{ fontSize: 7, fontFamily: 'Oswald_600SemiBold', color: '#A89070', letterSpacing: 1.2 }}>
+          PULSE
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function TierBadge({ tier }: { tier: string }) {
+  const cfg = TIER_CONFIG[tier] || TIER_CONFIG['Normal'];
+  return (
+    <View
+      style={{
+        backgroundColor: cfg.bg,
+        borderWidth: 1,
+        borderColor: cfg.border,
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        alignSelf: 'flex-start',
+      }}
+    >
+      <Text style={{ fontSize: 11, fontFamily: 'Oswald_600SemiBold', color: cfg.text, letterSpacing: 0.3 }}>
+        {tier}
+      </Text>
+    </View>
+  );
+}
+
+function CreatorChip({ name }: { name: string }) {
+  const initials = name
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <View
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          backgroundColor: 'rgba(192,88,0,0.12)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ fontSize: 8, fontFamily: 'Oswald_700Bold', color: '#C05800' }}>{initials}</Text>
+      </View>
+      <Text style={{ fontSize: 12, fontFamily: 'Oswald_500Medium', color: '#1a1a1a' }} numberOfLines={1}>
+        {name}
+      </Text>
+    </View>
+  );
+}
+
+function QuickAction({
+  icon,
+  label,
+  color,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  color: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={qaStyles.chip} onPress={onPress} activeOpacity={0.75}>
+      <View style={[qaStyles.iconWrap, { backgroundColor: `${color}18` }]}>
+        <Ionicons name={icon} size={20} color={color} />
+      </View>
+      <Text style={[qaStyles.label, { color }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const qaStyles = StyleSheet.create({
+  chip: { flex: 1, alignItems: 'center', gap: 5 },
+  iconWrap: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  label: { fontSize: 10, fontFamily: 'Oswald_600SemiBold', letterSpacing: 0.3 },
+});
+
+function StakeholderEmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <View style={seStyles.container}>
+      <View style={seStyles.avatarRow}>
+        {[0, 1, 2].map((i) => (
+          <View
+            key={i}
+            style={[
+              seStyles.ghostAvatar,
+              { opacity: 1 - i * 0.25, marginLeft: i > 0 ? -10 : 0, zIndex: 3 - i },
+            ]}
+          >
+            <Ionicons name="person-outline" size={18} color="#C4B49A" />
+          </View>
+        ))}
+      </View>
+      <Text style={seStyles.title}>No stakeholders yet</Text>
+      <Text style={seStyles.sub}>Add key contacts for this engagement</Text>
+      <TouchableOpacity onPress={onAdd} activeOpacity={0.85}>
+        <LinearGradient
+          colors={['#C05800', '#A04800']}
+          style={seStyles.btn}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Ionicons name="person-add-outline" size={15} color="#fff" />
+          <Text style={seStyles.btnText}>Add First Stakeholder</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const seStyles = StyleSheet.create({
+  container: { alignItems: 'center', paddingVertical: 28, paddingHorizontal: 16, gap: 10 },
+  avatarRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  ghostAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F5F0E8',
+    borderWidth: 2,
+    borderColor: '#E8DCC0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: { fontSize: 15, fontFamily: 'Oswald_600SemiBold', color: '#6B5540' },
+  sub: { fontSize: 12, fontFamily: 'Oswald_400Regular', color: '#A89070', textAlign: 'center', lineHeight: 17 },
+  btn: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginTop: 4 },
+  btnText: { fontSize: 13, fontFamily: 'Oswald_600SemiBold', color: '#fff', letterSpacing: 0.3 },
+});
+
+// ── Main component ─────────────────────────────────────────────────────────────
 
 type Props = {
   token: string;
   clientId: number;
-};
-
-const healthColor: Record<string, string> = {
-  Good: '#22c55e',
-  Neutral: '#f59e0b',
-  Risk: '#ef4444',
 };
 
 export default function ClientDetailScreen({ token, clientId }: Props) {
@@ -52,8 +405,9 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
   const [client, setClient] = useState<Client | null>(null);
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
 
-  // Stakeholder form
   const [showStakeholderForm, setShowStakeholderForm] = useState(false);
   const [shName, setShName] = useState('');
   const [shRole, setShRole] = useState('');
@@ -80,13 +434,42 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
     loadData();
   }, [loadData]);
 
-  const resetStakeholderForm = () => {
+  useEffect(() => {
+    (async () => {
+      try {
+        if (Platform.OS === 'web') {
+          if (!navigator.geolocation) return;
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              setUserLat(pos.coords.latitude);
+              setUserLng(pos.coords.longitude);
+            },
+            () => {},
+            { enableHighAccuracy: false, timeout: 8000 }
+          );
+        } else {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted') return;
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          setUserLat(loc.coords.latitude);
+          setUserLng(loc.coords.longitude);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const resetForm = () => {
     setShName('');
     setShRole('');
     setShEmail('');
     setShPhone('');
     setShNotes('');
     setShError('');
+  };
+
+  const openForm = () => {
+    resetForm();
+    setShowStakeholderForm(true);
   };
 
   const handleCreateStakeholder = async () => {
@@ -106,7 +489,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
       });
       await loadData();
       setShowStakeholderForm(false);
-      resetStakeholderForm();
+      resetForm();
     } catch (err: any) {
       setShError(err.message || 'Failed to add stakeholder');
     } finally {
@@ -127,7 +510,7 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#3d7b5f" />
+          <ActivityIndicator size="large" color="#C05800" />
         </View>
       </View>
     );
@@ -137,218 +520,354 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.centered}>
-          <Text style={styles.emptyText}>Client not found</Text>
+          <Text style={styles.notFoundText}>Client not found</Text>
         </View>
       </View>
     );
   }
 
-  const hColor = healthColor[client.engagement_health] || '#f59e0b';
+  const hColor = HEALTH_COLOR[client.engagement_health] || '#F59E0B';
+  const hasPin = client.office_latitude !== null && client.office_longitude !== null;
+  const hasUser = userLat !== null && userLng !== null;
+
+  let distLabel = '';
+  let driveMin = 0;
+  let localTime = '';
+
+  if (hasPin) {
+    localTime = estimateLocalTime(client.office_longitude!);
+    if (hasUser) {
+      const distKm = haversineKm(userLat!, userLng!, client.office_latitude!, client.office_longitude!);
+      distLabel = formatDistance(distKm);
+      driveMin = driveMinutes(distKm);
+    }
+  }
+
+  const officeName = client.primary_office_location || client.client_name;
+
+  const navigateToOffice = () => {
+    if (!hasPin) return;
+    if (Platform.OS === 'ios') {
+      openAppleMaps(client.office_latitude!, client.office_longitude!, officeName);
+    } else {
+      openGoogleMaps(client.office_latitude!, client.office_longitude!, officeName);
+    }
+  };
+
+  const hasCompanyIntel =
+    !!client.company_size || !!client.headquarters_location || !!client.website_domain;
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={18} color="#1a1a1a" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{client.client_name}</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
-        {/* Client Info Card */}
-        <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Code</Text>
-            <Text style={styles.infoValue}>{client.client_code}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Tier</Text>
-            <Text style={styles.infoValue}>{client.client_tier}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Health</Text>
-            <View style={styles.healthRow}>
-              <View style={[styles.healthDot, { backgroundColor: hColor }]} />
-              <Text style={[styles.infoValue, { color: hColor }]}>{client.engagement_health}</Text>
-            </View>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Status</Text>
-            <Text style={[styles.infoValue, { color: client.is_active ? '#22c55e' : '#ef4444' }]}>
-              {client.is_active ? 'Active' : 'Inactive'}
-            </Text>
-          </View>
-          {client.industry_sector ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Industry</Text>
-              <Text style={styles.infoValue}>{client.industry_sector}</Text>
-            </View>
-          ) : null}
-          {client.company_size ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Size</Text>
-              <Text style={styles.infoValue}>{client.company_size}</Text>
-            </View>
-          ) : null}
-          {client.headquarters_location ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>HQ</Text>
-              <Text style={styles.infoValue}>{client.headquarters_location}</Text>
-            </View>
-          ) : null}
-          {client.primary_office_location ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Office</Text>
-              <Text style={styles.infoValue}>{client.primary_office_location}</Text>
-            </View>
-          ) : null}
-          {client.website_domain ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Website</Text>
-              <Text style={styles.infoValue}>{client.website_domain}</Text>
-            </View>
-          ) : null}
-          {client.creator_name ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Added by</Text>
-              <Text style={styles.infoValue}>{client.creator_name}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* Stakeholders */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Stakeholders</Text>
-          <TouchableOpacity
-            style={styles.addSmallButton}
-            onPress={() => { resetStakeholderForm(); setShowStakeholderForm(true); }}
-          >
-            <Text style={styles.addSmallButtonText}>+ Add</Text>
-          </TouchableOpacity>
-        </View>
-
-        {stakeholders.length === 0 ? (
-          <View style={styles.emptySection}>
-            <Text style={styles.emptySectionText}>No stakeholders added yet</Text>
-          </View>
-        ) : (
-          stakeholders.map((s) => (
-            <View key={s.id} style={styles.stakeholderCard}>
-              <View style={styles.stakeholderTop}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.stakeholderName}>{s.contact_name}</Text>
-                  {s.designation_role ? (
-                    <Text style={styles.stakeholderRole}>{s.designation_role}</Text>
-                  ) : null}
-                </View>
-                <TouchableOpacity
-                  onPress={() => handleDeleteStakeholder(s.id)}
-                  style={styles.deleteBtn}
-                >
-                  <Text style={styles.deleteBtnText}>x</Text>
-                </TouchableOpacity>
-              </View>
-              {s.email ? <Text style={styles.stakeholderDetail}>{s.email}</Text> : null}
-              {s.phone ? <Text style={styles.stakeholderDetail}>{s.phone}</Text> : null}
-              {s.notes ? <Text style={styles.stakeholderNotes}>{s.notes}</Text> : null}
-            </View>
-          ))
-        )}
-
-        {/* Visit History Placeholder */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Visit History</Text>
-        </View>
-        <View style={styles.visitPlaceholder}>
-          <Ionicons name="calendar-outline" size={28} color="#d1d5db" style={{ marginBottom: 12 }} />
-          <Text style={styles.visitPlaceholderTitle}>Coming Soon</Text>
-          <Text style={styles.visitPlaceholderText}>
-            Visit logs and check-in history will appear here once the feature is enabled.
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle} numberOfLines={1}>{client.client_name}</Text>
+          <Text style={styles.headerSub} numberOfLines={1}>
+            {client.client_code}
+            {client.industry_sector ? ` · ${client.industry_sector}` : ''}
           </Text>
         </View>
-      </ScrollView>
+        <View style={[styles.healthPill, { backgroundColor: `${hColor}18`, borderColor: `${hColor}45` }]}>
+          <View style={[styles.healthPillDot, { backgroundColor: hColor }]} />
+          <Text style={[styles.healthPillText, { color: hColor }]}>{client.engagement_health}</Text>
+        </View>
+      </View>
 
-      {/* Add Stakeholder Modal */}
-      <Modal visible={showStakeholderForm} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Stakeholder</Text>
-              <TouchableOpacity onPress={() => setShowStakeholderForm(false)}>
-                <Text style={styles.modalClose}>x</Text>
-              </TouchableOpacity>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+
+        {/* ── Map Card ─────────────────────────────────────────────────────── */}
+        {hasPin ? (
+          <View style={styles.mapCard}>
+            <View style={styles.mapHero}>
+              <ClientLocationMap
+                clientLat={client.office_latitude!}
+                clientLng={client.office_longitude!}
+                userLat={userLat}
+                userLng={userLng}
+                style={{ flex: 1 }}
+              />
+              <View style={styles.mapLegend} pointerEvents="none">
+                {hasUser && (
+                  <View style={styles.legendBadge}>
+                    <View style={styles.legendDotGreen} />
+                    <Text style={styles.legendText}>You</Text>
+                  </View>
+                )}
+                <View style={[styles.legendBadge, styles.legendOrange]}>
+                  <Ionicons name="location" size={10} color="#C05800" />
+                  <Text style={[styles.legendText, { color: '#C05800' }]}>Office</Text>
+                </View>
+              </View>
             </View>
 
-            <ScrollView style={styles.formScroll} contentContainerStyle={{ paddingBottom: 60 }}>
-              <Text style={styles.formLabel}>Contact Name *</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Full name"
-                placeholderTextColor="#9ca3af"
-                value={shName}
-                onChangeText={setShName}
-              />
+            {/* Live Context Bar */}
+            <View style={styles.contextBar}>
+              <View style={styles.contextCell}>
+                <Text style={styles.contextValue}>{hasUser ? distLabel : '—'}</Text>
+                <Text style={styles.contextLabel}>DISTANCE</Text>
+              </View>
+              <View style={styles.contextDivider} />
+              <View style={styles.contextCell}>
+                <Text style={styles.contextValue}>{hasUser ? formatDriveTime(driveMin) : '—'}</Text>
+                <Text style={styles.contextLabel}>DRIVE TIME</Text>
+              </View>
+              <View style={styles.contextDivider} />
+              <View style={styles.contextCell}>
+                <Text style={styles.contextValue}>{localTime}</Text>
+                <Text style={styles.contextLabel}>LOCAL TIME ~</Text>
+              </View>
+            </View>
 
-              <Text style={styles.formLabel}>Designation / Role</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. VP Engineering"
-                placeholderTextColor="#9ca3af"
-                value={shRole}
-                onChangeText={setShRole}
-              />
+            {/* Address row */}
+            {client.primary_office_location ? (
+              <View style={styles.addressRow}>
+                <View style={styles.addressIcon}>
+                  <Ionicons name="business-outline" size={15} color="#C05800" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.addressLabel}>PRIMARY OFFICE</Text>
+                  <Text style={styles.addressText}>{client.primary_office_location}</Text>
+                </View>
+                <Text style={styles.coordsText}>
+                  {client.office_latitude!.toFixed(4)}°{'\n'}
+                  {client.office_longitude!.toFixed(4)}°
+                </Text>
+              </View>
+            ) : null}
 
-              <Text style={styles.formLabel}>Email</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="email@company.com"
-                placeholderTextColor="#9ca3af"
-                value={shEmail}
-                onChangeText={setShEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+            {/* Navigate CTA */}
+            <View style={styles.mapActions}>
+              <TouchableOpacity style={styles.navBtn} onPress={navigateToOffice} activeOpacity={0.85}>
+                <LinearGradient
+                  colors={['#C05800', '#A04800']}
+                  style={styles.navBtnGrad}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Ionicons name="navigate" size={16} color="#fff" />
+                  <Text style={styles.navBtnText}>Open in Maps</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.noPinCard}>
+            <View style={styles.noPinIcon}>
+              <Ionicons name="location-outline" size={28} color="#C4B49A" />
+            </View>
+            <Text style={styles.noPinTitle}>No location pinned</Text>
+            <Text style={styles.noPinSub}>Edit this engagement to pin the office on the map</Text>
+          </View>
+        )}
 
-              <Text style={styles.formLabel}>Phone</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="+1 555-0100"
-                placeholderTextColor="#9ca3af"
-                value={shPhone}
-                onChangeText={setShPhone}
-                keyboardType="phone-pad"
-              />
+        {/* ── Bento Row: Pulse + DNA ────────────────────────────────────────── */}
+        <View style={styles.bentoRow}>
 
-              <Text style={styles.formLabel}>Notes</Text>
-              <TextInput
-                style={[styles.formInput, styles.formInputMultiline]}
-                placeholder="Any relevant notes"
-                placeholderTextColor="#9ca3af"
-                value={shNotes}
-                onChangeText={setShNotes}
-                multiline
-                numberOfLines={3}
-              />
+          {/* Engagement Pulse cell */}
+          <View style={[styles.bentoCell, { flex: 1 }]}>
+            <Text style={styles.cellLabel}>ENGAGEMENT{'\n'}PULSE</Text>
+            <View style={{ alignItems: 'center', marginTop: 14 }}>
+              <EngagementRing health={client.engagement_health} />
+            </View>
+            <Text style={[styles.pulseHealthLabel, { color: hColor }]}>
+              {client.engagement_health}
+            </Text>
+          </View>
 
-              {shError ? (
-                <Text style={styles.formErrorText}>{shError}</Text>
+          {/* Client DNA cell */}
+          <View style={[styles.bentoCell, { flex: 1.2 }]}>
+            <Text style={styles.cellLabel}>CLIENT DNA</Text>
+            <View style={styles.dnaList}>
+
+              {/* Code — monospace chip */}
+              <View style={styles.dnaRow}>
+                <Text style={styles.dnaLabel}>Code</Text>
+                <View style={styles.dnaCodeChip}>
+                  <Text style={[styles.dnaCodeText, { fontFamily: MONOSPACE_FONT as string }]}>
+                    {client.client_code}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Tier — premium badge */}
+              <View style={styles.dnaRow}>
+                <Text style={styles.dnaLabel}>Tier</Text>
+                <TierBadge tier={client.client_tier} />
+              </View>
+
+              {/* Status — pulsing dot */}
+              <View style={styles.dnaRow}>
+                <Text style={styles.dnaLabel}>Status</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <PulsingDot color={client.is_active ? '#22C55E' : '#9CA3AF'} />
+                  <Text style={[styles.dnaStatusText, { color: client.is_active ? '#22C55E' : '#9CA3AF' }]}>
+                    {client.is_active ? 'Active' : 'Inactive'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Added by — avatar chip */}
+              {client.creator_name ? (
+                <View style={styles.dnaRow}>
+                  <Text style={styles.dnaLabel}>By</Text>
+                  <CreatorChip name={client.creator_name} />
+                </View>
               ) : null}
+            </View>
+          </View>
+        </View>
 
+        {/* ── Company Intel (optional fields) ──────────────────────────────── */}
+        {hasCompanyIntel && (
+          <View style={styles.detailsCard}>
+            <Text style={styles.sectionLabel}>COMPANY INTEL</Text>
+            {client.company_size ? (
+              <View style={styles.detailRow}>
+                <Ionicons name="people-outline" size={14} color="#A89070" />
+                <Text style={styles.detailKey}>Size</Text>
+                <Text style={styles.detailVal}>{client.company_size}</Text>
+              </View>
+            ) : null}
+            {client.headquarters_location ? (
+              <View style={styles.detailRow}>
+                <Ionicons name="business-outline" size={14} color="#A89070" />
+                <Text style={styles.detailKey}>HQ</Text>
+                <Text style={styles.detailVal}>{client.headquarters_location}</Text>
+              </View>
+            ) : null}
+            {client.website_domain ? (
+              <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+                <Ionicons name="globe-outline" size={14} color="#A89070" />
+                <Text style={styles.detailKey}>Web</Text>
+                <Text style={[styles.detailVal, { color: '#C05800' }]}>{client.website_domain}</Text>
+              </View>
+            ) : null}
+          </View>
+        )}
+
+        {/* ── Stakeholders ──────────────────────────────────────────────────── */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionLabel}>STAKEHOLDERS</Text>
+            {stakeholders.length > 0 && (
+              <TouchableOpacity style={styles.addChip} onPress={openForm}>
+                <Ionicons name="add" size={12} color="#C05800" />
+                <Text style={styles.addChipText}>Add</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {stakeholders.length === 0 ? (
+            <StakeholderEmptyState onAdd={openForm} />
+          ) : (
+            <View style={{ gap: 8 }}>
+              {stakeholders.map((s) => (
+                <View key={s.id} style={styles.stakeholderCard}>
+                  <View style={styles.shAvatarWrap}>
+                    <Text style={styles.shAvatar}>
+                      {s.contact_name.split(' ').map((w) => w[0]).slice(0, 2).join('')}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.shName}>{s.contact_name}</Text>
+                    {s.designation_role ? (
+                      <Text style={styles.shRole}>{s.designation_role}</Text>
+                    ) : null}
+                    {s.email ? (
+                      <View style={styles.contactRow}>
+                        <Ionicons name="mail-outline" size={11} color="#A89070" />
+                        <Text style={styles.contactText}>{s.email}</Text>
+                      </View>
+                    ) : null}
+                    {s.phone ? (
+                      <View style={styles.contactRow}>
+                        <Ionicons name="call-outline" size={11} color="#A89070" />
+                        <Text style={styles.contactText}>{s.phone}</Text>
+                      </View>
+                    ) : null}
+                    {s.notes ? <Text style={styles.shNotes}>{s.notes}</Text> : null}
+                  </View>
+                  <TouchableOpacity onPress={() => handleDeleteStakeholder(s.id)} style={styles.deleteBtn}>
+                    <Ionicons name="trash-outline" size={13} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* ── Visit History ─────────────────────────────────────────────────── */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionLabel}>VISIT HISTORY</Text>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Soon</Text>
+            </View>
+          </View>
+          <View style={styles.visitPlaceholder}>
+            <Ionicons name="calendar-outline" size={32} color="#E8DCC0" />
+            <Text style={styles.visitPlaceholderText}>Visit logs will appear here</Text>
+          </View>
+        </View>
+
+        {/* Padding for floating quick-action bar */}
+        <View style={{ height: 96 }} />
+      </ScrollView>
+
+      {/* ── Quick Action Bar ──────────────────────────────────────────────────── */}
+      <View style={styles.quickBar}>
+        <QuickAction icon="call-outline" label="Call" color="#22C55E" onPress={() => {}} />
+        <QuickAction icon="navigate-outline" label="Navigate" color="#C05800" onPress={navigateToOffice} />
+        <QuickAction icon="journal-outline" label="Log Visit" color="#6B5540" onPress={() => {}} />
+        <QuickAction icon="share-social-outline" label="Share" color="#A89070" onPress={() => {}} />
+      </View>
+
+      {/* ── Add Stakeholder Modal ─────────────────────────────────────────────── */}
+      <Modal visible={showStakeholderForm} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Stakeholder</Text>
               <TouchableOpacity
-                style={styles.submitButton}
+                onPress={() => setShowStakeholderForm(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={20} color="#6B5540" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              contentContainerStyle={styles.modalBody}
+              keyboardShouldPersistTaps="handled"
+            >
+              <ModalInput label="Contact Name *" value={shName} onChangeText={setShName} placeholder="Full name" />
+              <ModalInput label="Designation / Role" value={shRole} onChangeText={setShRole} placeholder="e.g. VP Engineering" />
+              <ModalInput label="Email" value={shEmail} onChangeText={setShEmail} placeholder="email@company.com" keyboardType="email-address" autoCapitalize="none" />
+              <ModalInput label="Phone" value={shPhone} onChangeText={setShPhone} placeholder="+1 555-0100" keyboardType="phone-pad" />
+              <ModalInput label="Notes" value={shNotes} onChangeText={setShNotes} placeholder="Any relevant notes" multiline />
+              {shError ? <Text style={styles.formError}>{shError}</Text> : null}
+              <TouchableOpacity
+                style={styles.submitBtn}
                 onPress={handleCreateStakeholder}
                 disabled={shSubmitting}
               >
-                <LinearGradient
-                  colors={['#3d7b5f', '#4a9d7a']}
-                  style={styles.submitButtonGradient}
-                >
+                <LinearGradient colors={['#C05800', '#A04800']} style={styles.submitGrad}>
                   {shSubmitting ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.submitButtonText}>Add Stakeholder</Text>
+                    <>
+                      <Ionicons name="person-add-outline" size={16} color="#fff" />
+                      <Text style={styles.submitText}>Add Stakeholder</Text>
+                    </>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
@@ -360,30 +879,66 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
   );
 }
 
+// ── ModalInput ─────────────────────────────────────────────────────────────────
+
+function ModalInput({
+  label,
+  ...props
+}: React.ComponentProps<typeof TextInput> & { label: string }) {
+  return (
+    <View style={miStyles.wrapper}>
+      <Text style={miStyles.label}>{label.toUpperCase()}</Text>
+      <TextInput
+        style={[miStyles.input, props.multiline && miStyles.inputMulti]}
+        placeholderTextColor="#B0A898"
+        textAlignVertical={props.multiline ? 'top' : 'auto'}
+        {...props}
+      />
+    </View>
+  );
+}
+
+const miStyles = StyleSheet.create({
+  wrapper: { marginBottom: 16 },
+  label: {
+    fontSize: 10,
+    fontFamily: 'Oswald_600SemiBold',
+    color: '#A89070',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#FAFAF8',
+    borderWidth: 1,
+    borderColor: '#EDE8DF',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontFamily: 'Oswald_400Regular',
+    color: '#1a1a1a',
+  },
+  inputMulti: { minHeight: 80 },
+});
+
+// ── Styles ─────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f0',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    fontFamily: 'Oswald_500Medium',
-    color: '#4a5568',
-  },
+  container: { flex: 1, backgroundColor: '#FDFBD4' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  notFoundText: { fontSize: 16, fontFamily: 'Oswald_500Medium', color: '#6B5540' },
+
+  // Header
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: Platform.OS === 'ios' ? 60 : Platform.OS === 'android' ? 40 : 24,
-    paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    backgroundColor: '#FDFBD4',
+    gap: 12,
   },
-  backButton: {
+  backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -391,257 +946,390 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E8DCC0',
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Oswald_700Bold',
-    color: '#1a1a1a',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 12,
+  headerCenter: { flex: 1 },
+  headerTitle: { fontSize: 20, fontFamily: 'Oswald_700Bold', color: '#1a1a1a', letterSpacing: 0.3 },
+  headerSub: { fontSize: 11, fontFamily: 'Oswald_400Regular', color: '#A89070', marginTop: 1 },
+  healthPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
   },
-  scrollArea: {
-    flex: 1,
+  healthPillDot: { width: 6, height: 6, borderRadius: 3 },
+  healthPillText: { fontSize: 11, fontFamily: 'Oswald_600SemiBold', letterSpacing: 0.3 },
+
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 4 },
+
+  // Map card
+  mapCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+    overflow: 'hidden',
+    marginBottom: 16,
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  scrollContent: {
+  mapHero: { height: 220, position: 'relative' },
+  mapLegend: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    flexDirection: 'row',
+    gap: 6,
+    zIndex: 10,
+  } as any,
+  legendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+  },
+  legendOrange: { borderColor: 'rgba(192,88,0,0.25)' },
+  legendDotGreen: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' },
+  legendText: { fontSize: 10, fontFamily: 'Oswald_600SemiBold', color: '#6B5540' },
+
+  // Live Context Bar
+  contextBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAFAF8',
+    paddingVertical: 13,
     paddingHorizontal: 16,
-    paddingBottom: 40,
-  },
-
-  // Info Card
-  infoCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f0',
+    borderBottomColor: '#F0EDE6',
   },
-  infoLabel: {
-    fontSize: 13,
-    fontFamily: 'Oswald_500Medium',
-    color: '#9ca3af',
-  },
-  infoValue: {
-    fontSize: 14,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#1a1a1a',
-  },
-  healthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  healthDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-
-  // Section
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
+  contextCell: { flex: 1, alignItems: 'center' },
+  contextValue: {
+    fontSize: 15,
     fontFamily: 'Oswald_700Bold',
     color: '#1a1a1a',
+    letterSpacing: 0.2,
   },
-  addSmallButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+  contextLabel: {
+    fontSize: 8,
+    fontFamily: 'Oswald_500Medium',
+    color: '#A89070',
+    marginTop: 2,
+    letterSpacing: 0.6,
+  },
+  contextDivider: { width: 1, height: 32, backgroundColor: '#E8DCC0' },
+
+  // Address
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0EDE6',
+  },
+  addressIcon: {
+    width: 32,
+    height: 32,
     borderRadius: 10,
-    backgroundColor: 'rgba(61,123,95,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(61,123,95,0.3)',
-  },
-  addSmallButtonText: {
-    fontSize: 13,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#3d7b5f',
-  },
-  emptySection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 24,
+    backgroundColor: 'rgba(192,88,0,0.08)',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginTop: 1,
   },
-  emptySectionText: {
-    fontSize: 13,
+  addressLabel: {
+    fontSize: 8,
+    fontFamily: 'Oswald_700Bold',
+    color: '#A89070',
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  addressText: { fontSize: 13, fontFamily: 'Oswald_500Medium', color: '#1a1a1a', lineHeight: 18 },
+  coordsText: {
+    fontSize: 9,
     fontFamily: 'Oswald_400Regular',
-    color: '#9ca3af',
+    color: '#C4B49A',
+    textAlign: 'right',
+    lineHeight: 13,
   },
 
-  // Stakeholder Card
-  stakeholderCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-  },
-  stakeholderTop: {
+  // Navigate CTA
+  mapActions: { padding: 14 },
+  navBtn: { borderRadius: 12, overflow: 'hidden' },
+  navBtnGrad: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    gap: 7,
   },
-  stakeholderName: {
-    fontSize: 15,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#1a1a1a',
+  navBtnText: { fontSize: 14, fontFamily: 'Oswald_600SemiBold', color: '#fff', letterSpacing: 0.4 },
+
+  // No pin state
+  noPinCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+    padding: 28,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
   },
-  stakeholderRole: {
+  noPinIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#F5F4EF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  noPinTitle: { fontSize: 15, fontFamily: 'Oswald_600SemiBold', color: '#A89070' },
+  noPinSub: {
     fontSize: 12,
     fontFamily: 'Oswald_400Regular',
-    color: '#3d7b5f',
-    marginTop: 2,
+    color: '#C4B49A',
+    textAlign: 'center',
+    lineHeight: 17,
   },
-  deleteBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(239,68,68,0.1)',
+
+  // Bento grid
+  bentoRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  bentoCell: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+    padding: 16,
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cellLabel: {
+    fontSize: 9,
+    fontFamily: 'Oswald_700Bold',
+    color: '#A89070',
+    letterSpacing: 1.5,
+    lineHeight: 13,
+  },
+  pulseHealthLabel: {
+    fontSize: 13,
+    fontFamily: 'Oswald_600SemiBold',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+
+  // DNA
+  dnaList: { marginTop: 12, gap: 10 },
+  dnaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  dnaLabel: { fontSize: 10, fontFamily: 'Oswald_500Medium', color: '#A89070' },
+  dnaCodeChip: {
+    backgroundColor: '#F5F4EF',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+  },
+  dnaCodeText: { fontSize: 12, color: '#1a1a1a' },
+  dnaStatusText: { fontSize: 12, fontFamily: 'Oswald_600SemiBold' },
+
+  // Company Intel
+  detailsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F4EF',
+  },
+  detailKey: { fontSize: 11, fontFamily: 'Oswald_500Medium', color: '#A89070', width: 28 },
+  detailVal: { fontSize: 13, fontFamily: 'Oswald_500Medium', color: '#1a1a1a', flex: 1 },
+
+  // Section card
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  sectionLabel: { fontSize: 9, fontFamily: 'Oswald_700Bold', color: '#A89070', letterSpacing: 1.5 },
+  addChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: 'rgba(192,88,0,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(192,88,0,0.2)',
+  },
+  addChipText: { fontSize: 11, fontFamily: 'Oswald_600SemiBold', color: '#C05800' },
+
+  // Stakeholder card
+  stakeholderCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 12,
+    backgroundColor: '#FDFBD4',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+  },
+  shAvatarWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: 'rgba(192,88,0,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteBtnText: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontFamily: 'Oswald_600SemiBold',
-  },
-  stakeholderDetail: {
-    fontSize: 12,
+  shAvatar: { fontSize: 13, fontFamily: 'Oswald_700Bold', color: '#C05800' },
+  shName: { fontSize: 14, fontFamily: 'Oswald_600SemiBold', color: '#1a1a1a' },
+  shRole: { fontSize: 11, fontFamily: 'Oswald_400Regular', color: '#C05800', marginTop: 1 },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  contactText: { fontSize: 11, fontFamily: 'Oswald_400Regular', color: '#6B5540' },
+  shNotes: {
+    fontSize: 11,
     fontFamily: 'Oswald_400Regular',
-    color: '#4a5568',
-    marginTop: 4,
-  },
-  stakeholderNotes: {
-    fontSize: 12,
-    fontFamily: 'Oswald_400Regular',
-    color: '#9ca3af',
-    marginTop: 6,
+    color: '#A89070',
+    marginTop: 5,
     fontStyle: 'italic',
   },
-
-  // Visit History Placeholder
-  visitPlaceholder: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
-    padding: 32,
+  deleteBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
   },
-  visitPlaceholderTitle: {
-    fontSize: 16,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#9ca3af',
-    marginBottom: 6,
-  },
-  visitPlaceholderText: {
-    fontSize: 13,
-    fontFamily: 'Oswald_400Regular',
-    color: '#9ca3af',
-    textAlign: 'center',
-    lineHeight: 20,
+
+  // Visit history
+  visitPlaceholder: { alignItems: 'center', gap: 8, paddingVertical: 20 },
+  visitPlaceholderText: { fontSize: 12, fontFamily: 'Oswald_400Regular', color: '#C4B49A' },
+  comingSoonBadge: { backgroundColor: '#F5F4EF', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  comingSoonText: { fontSize: 9, fontFamily: 'Oswald_600SemiBold', color: '#A89070', letterSpacing: 0.5 },
+
+  // Quick Action Bar
+  quickBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(253,251,212,0.96)',
+    borderTopWidth: 1,
+    borderTopColor: '#E8DCC0',
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 14,
+    paddingHorizontal: 20,
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 8,
   },
 
   // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalSheet: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    overflow: 'hidden',
-    maxHeight: '85%',
+    maxHeight: '88%',
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E8DCC0',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 4,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: 'Oswald_700Bold',
-    color: '#1a1a1a',
-  },
-  modalClose: {
-    fontSize: 20,
-    color: '#9ca3af',
-    fontFamily: 'Oswald_500Medium',
-    padding: 4,
-  },
-  formScroll: {
-    paddingHorizontal: 24,
-  },
-  formLabel: {
-    fontSize: 13,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#4a5568',
-    marginBottom: 8,
-    marginTop: 16,
-  },
-  formInput: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    fontFamily: 'Oswald_400Regular',
-    color: '#1a1a1a',
-  },
-  formInputMultiline: {
-    minHeight: 70,
-    textAlignVertical: 'top',
-  },
-  formErrorText: {
-    fontSize: 13,
-    fontFamily: 'Oswald_500Medium',
-    color: '#ef4444',
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  submitButton: {
-    marginTop: 24,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  submitButtonGradient: {
+    paddingHorizontal: 20,
     paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8DCC0',
+  },
+  modalTitle: { fontSize: 18, fontFamily: 'Oswald_700Bold', color: '#1a1a1a' },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F5F4EF',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 14,
   },
-  submitButtonText: {
-    fontSize: 16,
-    fontFamily: 'Oswald_600SemiBold',
-    color: '#fff',
+  modalBody: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 60 },
+  formError: {
+    fontSize: 12,
+    fontFamily: 'Oswald_500Medium',
+    color: '#EF4444',
+    textAlign: 'center',
+    marginVertical: 8,
   },
+  submitBtn: { marginTop: 8, borderRadius: 14, overflow: 'hidden' },
+  submitGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    gap: 8,
+  },
+  submitText: { fontSize: 15, fontFamily: 'Oswald_600SemiBold', color: '#fff', letterSpacing: 0.4 },
 });

@@ -11,12 +11,21 @@ export type DrawerParamList = {
 export type HomeStackParamList = {
   HomeMain: undefined;
   RecordingDetail: { recordingId: number };
-  VisitDetail: { visitId: string; clientName: string };
+  VisitDetail: {
+    visitId: string;
+    clientCode: string;
+    clientName: string;
+    time: string;
+    location: string;
+    status: 'upcoming' | 'in-progress' | 'completed' | 'cancelled' | 'postponed';
+    type: 'assigned' | 'self';
+  };
 };
 
 export type EngagementsStackParamList = {
   EngagementsList: undefined;
   ClientDetail: { clientId: number };
+  CreateEngagement: undefined;
 };
 
 export type SentryStackParamList = {
