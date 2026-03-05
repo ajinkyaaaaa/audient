@@ -21,6 +21,8 @@ import {
   Oswald_600SemiBold,
   Oswald_700Bold,
 } from '@expo-google-fonts/oswald';
+import { useAuth } from '../context/AuthContext';
+import { getGeoNearby } from '../services/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,6 +152,7 @@ function VisitCard({ visit, onPress }: { visit: Visit; onPress: () => void }) {
 
 export default function HomeScreen({ user }: HomeScreenProps) {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'HomeMain'>>();
+  const { token } = useAuth();
 
   const [fontsLoaded] = useFonts({
     Oswald_400Regular,
@@ -157,6 +160,36 @@ export default function HomeScreen({ user }: HomeScreenProps) {
     Oswald_600SemiBold,
     Oswald_700Bold,
   });
+
+  const [locationLabel, setLocationLabel] = useState<string>('—');
+
+  // ── GPS → geo lookup on mount ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        let lat: number, lng: number;
+        if (Platform.OS === 'web') {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 });
+          });
+          lat = pos.coords.latitude;
+          lng = pos.coords.longitude;
+        } else {
+          const Location = await import('expo-location');
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          lat = loc.coords.latitude;
+          lng = loc.coords.longitude;
+        }
+        const result = await getGeoNearby(token, lat, lng);
+        setLocationLabel(result.label ?? 'Other');
+      } catch {
+        setLocationLabel('—');
+      }
+    })();
+  }, [token]);
 
   // ── Shine animation — hooks must live before any early return ──────────────
   const [trackWidth, setTrackWidth] = useState(0);
@@ -231,7 +264,7 @@ export default function HomeScreen({ user }: HomeScreenProps) {
 
           <View style={styles.locationChip}>
             <Ionicons name="location" size={11} color="#A89070" />
-            <Text style={styles.locationChipText}>Mumbai</Text>
+            <Text style={styles.locationChipText}>{locationLabel}</Text>
           </View>
         </View>
 

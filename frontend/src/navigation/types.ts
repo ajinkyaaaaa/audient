@@ -32,3 +32,20 @@ export type SentryStackParamList = {
   SentryList: undefined;
   EmployeeDetail: { employeeId: number; employeeName: string };
 };
+
+export type ConfigStackParamList = {
+  ConfigMain: {
+    pickedLat?: number;
+    pickedLng?: number;
+    pickedAddress?: string;
+    pickedLabel?: string;
+    pickedOfficeDetails?: string;
+  } | undefined;
+  BaseLocationPicker: {
+    initialLat: number | null;
+    initialLng: number | null;
+    initialLabel: string;
+    initialAddress: string;
+    initialOfficeDetails: string;
+  };
+};

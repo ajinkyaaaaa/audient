@@ -93,6 +93,20 @@ async def init_db():
             );
         """)
         await conn.execute("""
+            CREATE TABLE IF NOT EXISTS visits (
+                id SERIAL PRIMARY KEY,
+                client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                office_label TEXT NOT NULL,
+                office_address TEXT,
+                planned_at TIMESTAMP NOT NULL,
+                start_location TEXT NOT NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        await conn.execute("""
             CREATE TABLE IF NOT EXISTS recordings (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -149,6 +163,47 @@ async def init_db():
         """)
         await conn.execute("""
             ALTER TABLE clients ADD COLUMN IF NOT EXISTS office_longitude DOUBLE PRECISION;
+        """)
+        # Migrate: org base location
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS base_lat DOUBLE PRECISION;
+        """)
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS base_lng DOUBLE PRECISION;
+        """)
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS base_label VARCHAR(255) DEFAULT 'Base';
+        """)
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS base_address TEXT;
+        """)
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS base_geofence_radius INTEGER DEFAULT 120;
+        """)
+        await conn.execute("""
+            ALTER TABLE organizations ADD COLUMN IF NOT EXISTS base_office_details TEXT;
+        """)
+        # Centralized geo-locator VIEW
+        await conn.execute("""
+            CREATE OR REPLACE VIEW geo_locations AS
+              SELECT 'org_base'::text AS source_type,
+                     o.id AS org_id, NULL::int AS user_id, NULL::int AS client_id,
+                     COALESCE(o.base_label, 'Base') AS label, o.base_address AS address,
+                     o.base_lat AS latitude, o.base_lng AS longitude,
+                     150 AS radius_meters, 1 AS priority
+              FROM organizations o
+              WHERE o.base_lat IS NOT NULL AND o.base_lng IS NOT NULL
+              UNION ALL
+              SELECT 'client'::text, NULL, c.user_id, c.id,
+                     c.client_name, c.primary_office_location,
+                     c.office_latitude, c.office_longitude, 200, 2
+              FROM clients c
+              WHERE c.office_latitude IS NOT NULL AND c.office_longitude IS NOT NULL
+              UNION ALL
+              SELECT 'saved'::text, NULL, lp.user_id, NULL,
+                     lp.name, lp.address, lp.latitude, lp.longitude, 100, 3
+              FROM location_profiles lp
+              WHERE lp.latitude IS NOT NULL AND lp.longitude IS NOT NULL;
         """)
     print("Database initialized — tables ready")
 

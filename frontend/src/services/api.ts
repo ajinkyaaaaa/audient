@@ -34,6 +34,12 @@ export type OrgConfig = {
   org_name?: string;
   join_code?: string;
   location_sync_interval?: number;
+  base_lat?: number | null;
+  base_lng?: number | null;
+  base_label?: string | null;
+  base_address?: string | null;
+  base_geofence_radius?: number | null;
+  base_office_details?: string | null;
 };
 
 type AuthResponse = {
@@ -284,6 +290,59 @@ export async function deleteStakeholder(
   });
 }
 
+// Visits
+
+export type Visit = {
+  id: number;
+  client_id: number;
+  user_id: number;
+  office_label: string;
+  office_address: string | null;
+  planned_at: string;
+  start_location: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function createVisit(
+  token: string,
+  clientId: number,
+  data: {
+    office_label: string;
+    office_address?: string;
+    planned_at: string;
+    start_location: string;
+    notes?: string;
+  }
+): Promise<{ visit: Visit }> {
+  return request<{ visit: Visit }>(`/clients/${clientId}/visits`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getVisits(
+  token: string,
+  clientId: number
+): Promise<{ visits: Visit[] }> {
+  return request<{ visits: Visit[] }>(`/clients/${clientId}/visits`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function deleteVisit(
+  token: string,
+  clientId: number,
+  visitId: number
+): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/clients/${clientId}/visits/${visitId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 // Recordings
 
 export type Recording = {
@@ -428,5 +487,15 @@ export async function updateOrgConfig(
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
+  });
+}
+
+export async function getGeoNearby(
+  token: string,
+  lat: number,
+  lng: number,
+): Promise<{ label: string | null; source: string; distance_m: number | null }> {
+  return request(`/geo/nearby?lat=${lat}&lng=${lng}`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 }

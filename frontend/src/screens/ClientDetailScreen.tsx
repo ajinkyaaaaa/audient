@@ -28,10 +28,19 @@ import {
   getStakeholders,
   createStakeholder,
   deleteStakeholder,
+  getVisits,
+  createVisit,
+  deleteVisit,
+  getLocationProfiles,
   Client,
   Stakeholder,
+  Visit,
 } from '../services/api';
 import ClientLocationMap from '../components/ClientLocationMap';
+// DateTimePicker only available on native
+const DateTimePicker = Platform.OS !== 'web'
+  ? require('@react-native-community/datetimepicker').default
+  : null;
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -404,9 +413,11 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
 
   const [client, setClient] = useState<Client | null>(null);
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([]);
+  const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+  const [baseLocation, setBaseLocation] = useState<string | null>(null);
 
   const [showStakeholderForm, setShowStakeholderForm] = useState(false);
   const [shName, setShName] = useState('');
@@ -417,14 +428,29 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
   const [shSubmitting, setShSubmitting] = useState(false);
   const [shError, setShError] = useState('');
 
+  const [showVisitForm, setShowVisitForm] = useState(false);
+  const [vOfficeLabel, setVOfficeLabel] = useState('');
+  const [vOfficeAddress, setVOfficeAddress] = useState('');
+  const [vDate, setVDate] = useState(new Date());
+  const [vShowDatePicker, setVShowDatePicker] = useState(false);
+  const [vShowTimePicker, setVShowTimePicker] = useState(false);
+  const [vWebDateText, setVWebDateText] = useState('');
+  const [vStartLocation, setVStartLocation] = useState('');
+  const [vCustomStart, setVCustomStart] = useState('');
+  const [vNotes, setVNotes] = useState('');
+  const [vSubmitting, setVSubmitting] = useState(false);
+  const [vError, setVError] = useState('');
+
   const loadData = useCallback(async () => {
     try {
-      const [clientData, stakeholderData] = await Promise.all([
+      const [clientData, stakeholderData, visitsData] = await Promise.all([
         getClient(token, clientId),
         getStakeholders(token, clientId),
+        getVisits(token, clientId),
       ]);
       setClient(clientData.client);
       setStakeholders(stakeholderData.stakeholders);
+      setVisits(visitsData.visits);
     } catch {} finally {
       setLoading(false);
     }
@@ -433,6 +459,13 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    getLocationProfiles(token).then(({ profiles }) => {
+      const base = profiles.find((p) => p.type === 'base');
+      if (base) setBaseLocation(base.name);
+    }).catch(() => {});
+  }, [token]);
 
   useEffect(() => {
     (async () => {
@@ -500,6 +533,82 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
   const handleDeleteStakeholder = async (id: number) => {
     try {
       await deleteStakeholder(token, clientId, id);
+      await loadData();
+    } catch {}
+  };
+
+  const resetVisitForm = () => {
+    setVOfficeLabel('');
+    setVOfficeAddress('');
+    setVDate(new Date());
+    setVShowDatePicker(false);
+    setVShowTimePicker(false);
+    setVWebDateText('');
+    setVStartLocation('');
+    setVCustomStart('');
+    setVNotes('');
+    setVError('');
+  };
+
+  const openVisitForm = () => {
+    resetVisitForm();
+    setShowVisitForm(true);
+  };
+
+  const handleCreateVisit = async () => {
+    if (!vOfficeLabel) {
+      setVError('Please select a destination office');
+      return;
+    }
+    const startLoc = vStartLocation === 'custom' ? vCustomStart.trim() : (baseLocation || 'Base');
+    if (vStartLocation === 'custom' && !vCustomStart.trim()) {
+      setVError('Please enter a start location');
+      return;
+    }
+    if (!vStartLocation) {
+      setVError('Please select a start location');
+      return;
+    }
+
+    let plannedAt: string;
+    if (Platform.OS === 'web') {
+      if (!vWebDateText.trim()) {
+        setVError('Please enter a date/time');
+        return;
+      }
+      const parsed = new Date(vWebDateText.trim());
+      if (isNaN(parsed.getTime())) {
+        setVError('Invalid date format. Use YYYY-MM-DD HH:MM');
+        return;
+      }
+      plannedAt = parsed.toISOString();
+    } else {
+      plannedAt = vDate.toISOString();
+    }
+
+    setVSubmitting(true);
+    setVError('');
+    try {
+      await createVisit(token, clientId, {
+        office_label: vOfficeLabel,
+        office_address: vOfficeAddress || undefined,
+        planned_at: plannedAt,
+        start_location: startLoc,
+        notes: vNotes.trim() || undefined,
+      });
+      await loadData();
+      setShowVisitForm(false);
+      resetVisitForm();
+    } catch (err: any) {
+      setVError(err.message || 'Failed to log visit');
+    } finally {
+      setVSubmitting(false);
+    }
+  };
+
+  const handleDeleteVisit = async (id: number) => {
+    try {
+      await deleteVisit(token, clientId, id);
       await loadData();
     } catch {}
   };
@@ -809,14 +918,58 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionLabel}>VISIT HISTORY</Text>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>Soon</Text>
+            {visits.length > 0 && (
+              <TouchableOpacity style={styles.addChip} onPress={openVisitForm}>
+                <Ionicons name="add" size={12} color="#C05800" />
+                <Text style={styles.addChipText}>Add</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {visits.length === 0 ? (
+            <View style={seStyles.container}>
+              <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: '#F5F0E8', borderWidth: 1, borderColor: '#E8DCC0', justifyContent: 'center', alignItems: 'center', marginBottom: 4 }}>
+                <Ionicons name="calendar-outline" size={26} color="#C4B49A" />
+              </View>
+              <Text style={seStyles.title}>No visits logged yet</Text>
+              <Text style={seStyles.sub}>Log a planned visit to this client</Text>
+              <TouchableOpacity onPress={openVisitForm} activeOpacity={0.85}>
+                <LinearGradient colors={['#C05800', '#A04800']} style={seStyles.btn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                  <Ionicons name="calendar-outline" size={15} color="#fff" />
+                  <Text style={seStyles.btnText}>Log First Visit</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
-          </View>
-          <View style={styles.visitPlaceholder}>
-            <Ionicons name="calendar-outline" size={32} color="#E8DCC0" />
-            <Text style={styles.visitPlaceholderText}>Visit logs will appear here</Text>
-          </View>
+          ) : (
+            <View style={{ gap: 8 }}>
+              {visits.map((v) => {
+                const dt = new Date(v.planned_at);
+                const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                return (
+                  <View key={v.id} style={styles.visitCard}>
+                    <View style={styles.visitDateBadge}>
+                      <Text style={styles.visitDateDay}>{dt.getDate()}</Text>
+                      <Text style={styles.visitDateMon}>{dt.toLocaleString('en-US', { month: 'short' }).toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.visitOffice}>{v.office_label}</Text>
+                      {v.office_address ? (
+                        <Text style={styles.visitAddr} numberOfLines={1}>{v.office_address}</Text>
+                      ) : null}
+                      <Text style={styles.visitMeta}>
+                        <Ionicons name="navigate-outline" size={10} color="#A89070" /> {v.start_location}  ·  {timeStr}
+                      </Text>
+                      {v.notes ? <Text style={styles.visitNotes}>{v.notes}</Text> : null}
+                    </View>
+                    <TouchableOpacity onPress={() => handleDeleteVisit(v.id)} style={styles.deleteBtn}>
+                      <Ionicons name="trash-outline" size={13} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* Padding for floating quick-action bar */}
@@ -827,9 +980,162 @@ export default function ClientDetailScreen({ token, clientId }: Props) {
       <View style={styles.quickBar}>
         <QuickAction icon="call-outline" label="Call" color="#22C55E" onPress={() => {}} />
         <QuickAction icon="navigate-outline" label="Navigate" color="#C05800" onPress={navigateToOffice} />
-        <QuickAction icon="journal-outline" label="Log Visit" color="#6B5540" onPress={() => {}} />
+        <QuickAction icon="journal-outline" label="Log Visit" color="#6B5540" onPress={openVisitForm} />
         <QuickAction icon="share-social-outline" label="Share" color="#A89070" onPress={() => {}} />
       </View>
+
+      {/* ── Add Visit Modal ───────────────────────────────────────────────────── */}
+      <Modal visible={showVisitForm} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Log Visit</Text>
+              <TouchableOpacity onPress={() => setShowVisitForm(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={20} color="#6B5540" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
+
+              {/* DESTINATION */}
+              <Text style={miStyles.label}>DESTINATION</Text>
+              {(() => {
+                const officeOptions: { label: string; address: string }[] = [];
+                if (client?.primary_office_location) officeOptions.push({ label: 'Primary Office', address: client.primary_office_location });
+                if (client?.headquarters_location) officeOptions.push({ label: 'HQ', address: client.headquarters_location });
+                if (officeOptions.length === 0) {
+                  return (
+                    <View style={{ marginBottom: 16 }}>
+                      <ModalInput label="" value={vOfficeLabel} onChangeText={(t) => { setVOfficeLabel(t); setVOfficeAddress(''); }} placeholder="Office name" />
+                    </View>
+                  );
+                }
+                return (
+                  <View style={[styles.pillRow, { marginBottom: 16 }]}>
+                    {officeOptions.map((opt) => (
+                      <TouchableOpacity
+                        key={opt.label}
+                        style={[styles.pill, vOfficeLabel === opt.label && styles.pillActive]}
+                        onPress={() => { setVOfficeLabel(opt.label); setVOfficeAddress(opt.address); }}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[styles.pillText, vOfficeLabel === opt.label && styles.pillTextActive]}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                );
+              })()}
+
+              {/* WHEN */}
+              <Text style={[miStyles.label, { marginBottom: 8 }]}>WHEN</Text>
+              {Platform.OS === 'web' ? (
+                <View style={{ marginBottom: 16 }}>
+                  <TextInput
+                    style={miStyles.input}
+                    value={vWebDateText}
+                    onChangeText={setVWebDateText}
+                    placeholder="YYYY-MM-DD HH:MM"
+                    placeholderTextColor="#B0A898"
+                  />
+                </View>
+              ) : (
+                <View style={{ marginBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                    <TouchableOpacity style={[styles.pill, { flex: 1 }]} onPress={() => { setVShowTimePicker(false); setVShowDatePicker(true); }} activeOpacity={0.75}>
+                      <Ionicons name="calendar-outline" size={13} color="#6B5540" />
+                      <Text style={styles.pillText}>Pick Date</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.pill, { flex: 1 }]} onPress={() => { setVShowDatePicker(false); setVShowTimePicker(true); }} activeOpacity={0.75}>
+                      <Ionicons name="time-outline" size={13} color="#6B5540" />
+                      <Text style={styles.pillText}>Pick Time</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={{ fontSize: 13, fontFamily: 'Oswald_500Medium', color: '#1a1a1a' }}>
+                    {vDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                  </Text>
+                  {vShowDatePicker && DateTimePicker && (
+                    <DateTimePicker
+                      value={vDate}
+                      mode="date"
+                      display="default"
+                      onChange={(_: any, selected?: Date) => {
+                        setVShowDatePicker(false);
+                        if (selected) {
+                          const merged = new Date(selected);
+                          merged.setHours(vDate.getHours(), vDate.getMinutes());
+                          setVDate(merged);
+                        }
+                      }}
+                    />
+                  )}
+                  {vShowTimePicker && DateTimePicker && (
+                    <DateTimePicker
+                      value={vDate}
+                      mode="time"
+                      display="default"
+                      onChange={(_: any, selected?: Date) => {
+                        setVShowTimePicker(false);
+                        if (selected) setVDate(selected);
+                      }}
+                    />
+                  )}
+                </View>
+              )}
+
+              {/* STARTING FROM */}
+              <Text style={[miStyles.label, { marginBottom: 8 }]}>STARTING FROM</Text>
+              <View style={[styles.pillRow, { marginBottom: vStartLocation === 'custom' ? 8 : 16 }]}>
+                <TouchableOpacity
+                  style={[styles.pill, { flex: 1 }, vStartLocation === 'base' && styles.pillActive]}
+                  onPress={() => setVStartLocation('base')}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="home-outline" size={13} color={vStartLocation === 'base' ? '#C05800' : '#6B5540'} />
+                  <Text style={[styles.pillText, vStartLocation === 'base' && styles.pillTextActive]}>
+                    {baseLocation || 'Base'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pill, { flex: 1 }, vStartLocation === 'custom' && styles.pillActive]}
+                  onPress={() => setVStartLocation('custom')}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="create-outline" size={13} color={vStartLocation === 'custom' ? '#C05800' : '#6B5540'} />
+                  <Text style={[styles.pillText, vStartLocation === 'custom' && styles.pillTextActive]}>Custom</Text>
+                </TouchableOpacity>
+              </View>
+              {vStartLocation === 'custom' && (
+                <View style={{ marginBottom: 16 }}>
+                  <TextInput
+                    style={miStyles.input}
+                    value={vCustomStart}
+                    onChangeText={setVCustomStart}
+                    placeholder="e.g. Home, Airport, Hotel..."
+                    placeholderTextColor="#B0A898"
+                  />
+                </View>
+              )}
+
+              {/* NOTES */}
+              <ModalInput label="Notes (optional)" value={vNotes} onChangeText={setVNotes} placeholder="Any notes about this visit" multiline />
+
+              {vError ? <Text style={styles.formError}>{vError}</Text> : null}
+              <TouchableOpacity style={styles.submitBtn} onPress={handleCreateVisit} disabled={vSubmitting}>
+                <LinearGradient colors={['#C05800', '#A04800']} style={styles.submitGrad}>
+                  {vSubmitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="calendar-outline" size={16} color="#fff" />
+                      <Text style={styles.submitText}>Log Visit</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Add Stakeholder Modal ─────────────────────────────────────────────── */}
       <Modal visible={showStakeholderForm} transparent animationType="slide">
@@ -1253,11 +1559,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Visit history
-  visitPlaceholder: { alignItems: 'center', gap: 8, paddingVertical: 20 },
-  visitPlaceholderText: { fontSize: 12, fontFamily: 'Oswald_400Regular', color: '#C4B49A' },
-  comingSoonBadge: { backgroundColor: '#F5F4EF', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  comingSoonText: { fontSize: 9, fontFamily: 'Oswald_600SemiBold', color: '#A89070', letterSpacing: 0.5 },
+  // Visit cards
+  visitCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 12,
+    backgroundColor: '#FDFBD4',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+  },
+  visitDateBadge: {
+    width: 40,
+    minHeight: 44,
+    borderRadius: 10,
+    backgroundColor: 'rgba(192,88,0,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(192,88,0,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  visitDateDay: { fontSize: 17, fontFamily: 'Oswald_700Bold', color: '#C05800', lineHeight: 20 },
+  visitDateMon: { fontSize: 8, fontFamily: 'Oswald_600SemiBold', color: '#C05800', letterSpacing: 0.5 },
+  visitOffice: { fontSize: 14, fontFamily: 'Oswald_600SemiBold', color: '#1a1a1a' },
+  visitAddr: { fontSize: 11, fontFamily: 'Oswald_400Regular', color: '#6B5540', marginTop: 1 },
+  visitMeta: { fontSize: 11, fontFamily: 'Oswald_400Regular', color: '#A89070', marginTop: 4 },
+  visitNotes: { fontSize: 11, fontFamily: 'Oswald_400Regular', color: '#A89070', marginTop: 4, fontStyle: 'italic' },
+
+  // Pills (office/start selector)
+  pillRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#F5F4EF',
+    borderWidth: 1,
+    borderColor: '#E8DCC0',
+  },
+  pillActive: {
+    backgroundColor: 'rgba(192,88,0,0.1)',
+    borderColor: 'rgba(192,88,0,0.35)',
+  },
+  pillText: { fontSize: 13, fontFamily: 'Oswald_500Medium', color: '#6B5540' },
+  pillTextActive: { color: '#C05800', fontFamily: 'Oswald_600SemiBold' },
 
   // Quick Action Bar
   quickBar: {

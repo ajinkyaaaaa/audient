@@ -9,7 +9,7 @@ import HomeNavigator from './HomeNavigator';
 import EngagementsNavigator from './EngagementsNavigator';
 import TasksScreen from '../screens/TasksScreen';
 import SentryNavigator from './SentryNavigator';
-import ConfigScreen from '../screens/ConfigScreen';
+import ConfigNavigator from './ConfigNavigator';
 import SettingsScreen from '../screens/SettingsScreen';
 import { OrgConfig } from '../services/api';
 
@@ -72,7 +72,7 @@ export default function AppNavigator({ user, token, onLogout, orgConfig }: Props
           </Drawer.Screen>
           {user.role === 'admin' && (
             <Drawer.Screen name="Config">
-              {() => <ConfigScreen token={token} />}
+              {() => <ConfigNavigator />}
             </Drawer.Screen>
           )}
         </Drawer.Navigator>

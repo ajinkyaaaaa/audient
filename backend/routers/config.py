@@ -44,11 +44,15 @@ async def get_config(request: Request):
         return JSONResponse(status_code=200, content={"config": DEFAULTS})
 
     org = await pool.fetchrow(
-        "SELECT name, login_time, logoff_time, timezone, join_code, location_sync_interval FROM organizations WHERE id = $1",
+        "SELECT name, login_time, logoff_time, timezone, join_code, location_sync_interval, base_lat, base_lng, base_label, base_address, base_geofence_radius, base_office_details FROM organizations WHERE id = $1",
         user["organization_id"],
     )
     if not org:
         return JSONResponse(status_code=200, content={"config": DEFAULTS})
+
+    _valid_radii = {50, 120, 200}
+    raw_radius = org["base_geofence_radius"]
+    geofence_radius = raw_radius if raw_radius in _valid_radii else 120
 
     return JSONResponse(status_code=200, content={
         "config": {
@@ -58,6 +62,12 @@ async def get_config(request: Request):
             "org_name": org["name"],
             "join_code": org["join_code"],
             "location_sync_interval": org["location_sync_interval"] or DEFAULTS["location_sync_interval"],
+            "base_lat": float(org["base_lat"]) if org["base_lat"] is not None else None,
+            "base_lng": float(org["base_lng"]) if org["base_lng"] is not None else None,
+            "base_label": org["base_label"],
+            "base_address": org["base_address"],
+            "base_geofence_radius": geofence_radius,
+            "base_office_details": org["base_office_details"],
         }
     })
 
@@ -85,6 +95,12 @@ async def update_config(request: Request):
     logoff_time_str = body.get("logoff_time")
     timezone_str = body.get("timezone")
     location_sync_interval = body.get("location_sync_interval")
+    base_lat = body.get("base_lat")
+    base_lng = body.get("base_lng")
+    base_label = body.get("base_label")
+    base_address = body.get("base_address")
+    base_geofence_radius = body.get("base_geofence_radius")
+    base_office_details = body.get("base_office_details")
 
     # Validate timezone
     if timezone_str and timezone_str not in VALID_TIMEZONES:
@@ -130,6 +146,43 @@ async def update_config(request: Request):
         params.append(interval_int)
         idx += 1
 
+    if base_lat is not None:
+        try:
+            updates.append(f"base_lat = ${idx}")
+            params.append(float(base_lat))
+            idx += 1
+        except (ValueError, TypeError):
+            return JSONResponse(status_code=400, content={"error": "base_lat must be a number"})
+    if base_lng is not None:
+        try:
+            updates.append(f"base_lng = ${idx}")
+            params.append(float(base_lng))
+            idx += 1
+        except (ValueError, TypeError):
+            return JSONResponse(status_code=400, content={"error": "base_lng must be a number"})
+    if base_label is not None:
+        updates.append(f"base_label = ${idx}")
+        params.append(str(base_label))
+        idx += 1
+    if base_address is not None:
+        updates.append(f"base_address = ${idx}")
+        params.append(str(base_address))
+        idx += 1
+    if base_office_details is not None:
+        updates.append(f"base_office_details = ${idx}")
+        params.append(str(base_office_details))
+        idx += 1
+    if base_geofence_radius is not None:
+        try:
+            radius_int = int(base_geofence_radius)
+        except (ValueError, TypeError):
+            return JSONResponse(status_code=400, content={"error": "base_geofence_radius must be an integer"})
+        if radius_int not in (50, 120, 200):
+            return JSONResponse(status_code=400, content={"error": "base_geofence_radius must be 50, 120, or 200"})
+        updates.append(f"base_geofence_radius = ${idx}")
+        params.append(radius_int)
+        idx += 1
+
     if not updates:
         return JSONResponse(status_code=400, content={"error": "No fields to update"})
 
@@ -139,8 +192,12 @@ async def update_config(request: Request):
 
     # Fetch updated config
     org = await pool.fetchrow(
-        "SELECT login_time, logoff_time, timezone, location_sync_interval FROM organizations WHERE id = $1", org_id
+        "SELECT login_time, logoff_time, timezone, location_sync_interval, base_lat, base_lng, base_label, base_address, base_geofence_radius, base_office_details FROM organizations WHERE id = $1", org_id
     )
+
+    _valid_radii = {50, 120, 200}
+    raw_radius = org["base_geofence_radius"]
+    geofence_radius = raw_radius if raw_radius in _valid_radii else 120
 
     return JSONResponse(status_code=200, content={
         "config": {
@@ -148,5 +205,11 @@ async def update_config(request: Request):
             "logoff_time": org["logoff_time"].strftime("%H:%M") if org["logoff_time"] else DEFAULTS["logoff_time"],
             "timezone": org["timezone"] or DEFAULTS["timezone"],
             "location_sync_interval": org["location_sync_interval"] or DEFAULTS["location_sync_interval"],
+            "base_lat": float(org["base_lat"]) if org["base_lat"] is not None else None,
+            "base_lng": float(org["base_lng"]) if org["base_lng"] is not None else None,
+            "base_label": org["base_label"],
+            "base_address": org["base_address"],
+            "base_geofence_radius": geofence_radius,
+            "base_office_details": org["base_office_details"],
         }
     })

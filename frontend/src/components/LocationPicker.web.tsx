@@ -129,6 +129,24 @@ export default function LocationPicker({ latitude, longitude, onLocationPicked, 
   const [inputFocused, setInputFocused] = useState(false);
   const searchTimer = useRef<any>(null);
 
+  // ── Center on user's current location on mount (when no initial pin) ────────
+  useEffect(() => {
+    if (latitude !== null || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setFlyConfig({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          zoom: 15,
+          key: Date.now(),
+        });
+      },
+      () => {}, // silently ignore permission denial
+      { timeout: 8000 }
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Inject Leaflet CSS + crosshair cursor once
   useEffect(() => {
     if (!document.getElementById('leaflet-css')) {

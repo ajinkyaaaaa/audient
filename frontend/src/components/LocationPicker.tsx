@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -48,6 +48,30 @@ export default function LocationPicker({ latitude, longitude, onLocationPicked, 
   const searchTimer = useRef<any>(null);
 
   const hasPin = latitude !== null && longitude !== null;
+
+  // ── Center on current position on mount (when no initial pin) ─────────────
+  useEffect(() => {
+    if (hasPin) return;
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        mapRef.current?.animateToRegion(
+          {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          },
+          600
+        );
+      } catch {}
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Nominatim search ────────────────────────────────────────────────────────
 
@@ -136,6 +160,7 @@ export default function LocationPicker({ latitude, longitude, onLocationPicked, 
           onLocationPicked(lat, lng);
         }}
         showsUserLocation
+        followsUserLocation={!hasPin}
         showsMyLocationButton={false}
       >
         {hasPin && (

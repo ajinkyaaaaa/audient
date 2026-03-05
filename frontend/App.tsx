@@ -8,6 +8,7 @@ import * as TaskManager from 'expo-task-manager';
 import AuthScreen from './src/screens/AuthScreen';
 import AppNavigator from './src/navigation/AppNavigator';
 import { OrgConfig, syncLocation } from './src/services/api';
+import { AuthContextProvider } from './src/context/AuthContext';
 
 // ── Background location task ─────────────────────────────────────────────────
 // Must be defined at module level, before any component renders.
@@ -230,13 +231,15 @@ export default function App() {
   if (!ready) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="light" />
-      {user && token ? (
-        <AppNavigator user={user} token={token} onLogout={handleLogout} orgConfig={orgConfig} />
-      ) : (
-        <AuthScreen onLogin={handleLogin} orgConfig={orgConfig} />
-      )}
-    </GestureHandlerRootView>
+    <AuthContextProvider value={{ user, token }}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <StatusBar style="light" />
+        {user && token ? (
+          <AppNavigator user={user} token={token} onLogout={handleLogout} orgConfig={orgConfig} />
+        ) : (
+          <AuthScreen onLogin={handleLogin} orgConfig={orgConfig} />
+        )}
+      </GestureHandlerRootView>
+    </AuthContextProvider>
   );
 }
